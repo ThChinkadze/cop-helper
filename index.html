@@ -19,8 +19,8 @@
             --dk-color: #007aff;
             --success: #34c759;
             
-            /* Фиксированная высота всей карточки */
-            --card-height: 280px; 
+            /* Увеличили высоту для комфортного размещения таблицы-досье */
+            --card-height: 350px; 
         }
 
         body {
@@ -95,7 +95,7 @@
             margin-top: 10px;
         }
 
-        /* --- ОБНОВЛЕННАЯ СТРУКТУРА КАРТОЧКИ --- */
+        /* --- СТРОГИЙ ШАБЛОН КАРТОЧКИ --- */
         .card {
             background-color: var(--card-bg);
             border-radius: 12px;
@@ -105,11 +105,11 @@
             box-sizing: border-box;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
             
-            /* Превращаем карточку в строго размеченную Grid-сетку */
+            /* Жесткая сетка: Заголовок (50px), Таблица (115px), Описание (всё остальное) */
             display: grid;
             height: var(--card-height);
-            grid-template-rows: 55px 32px 1fr; /* 1 ряд: Хедер, 2 ряд: Бейджи, 3 ряд: Описание */
-            gap: 10px; 
+            grid-template-rows: 50px 115px 1fr; 
+            gap: 12px; 
         }
         
         .card:hover { 
@@ -172,40 +172,60 @@
             font-size: 11px; 
             letter-spacing: 1px;
             line-height: 1;
-            min-height: 11px; /* Резерв места, если звезд нет */
+            min-height: 11px; /* Защита от прыжков, если звезд нет */
         }
         
-        .punishment { 
-            display: flex; 
-            gap: 6px; 
-            align-items: center;
-            overflow-x: auto; 
-            overflow-y: hidden;
-            white-space: nowrap;
-            height: 32px;
-            box-sizing: border-box;
-        }
-        
-        .punishment::-webkit-scrollbar { height: 0px; }
-        
-        .badge {
-            background-color: #2c2c2e;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 800; 
-            color: #ffffff;
+        /* --- ТАБЛИЦА НАКАЗАНИЙ (ДОСЬЕ) --- */
+        .info-table {
+            background-color: #262628;
+            border-radius: 8px;
+            padding: 10px 12px;
             border: 1px solid #3a3a3c;
-            display: inline-flex;
-            align-items: center;
-        }
-        
-        .badge.danger {
-            background-color: #3a161a;
-            color: #ff453a;
-            border: 1px solid #641e24;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            justify-content: space-between;
         }
 
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            border-bottom: 1px dashed #3a3a3c;
+            padding-bottom: 4px;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            color: #8e8e93;
+            font-weight: 600;
+        }
+
+        .info-val {
+            color: #ffffff;
+            font-weight: 800;
+            text-align: right;
+            max-width: 65%; /* Не дает длинным значениям сломать верстку */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .info-val.empty {
+            color: #555555;
+            font-weight: 400;
+        }
+
+        .info-val.danger {
+            color: var(--uk-color);
+        }
+
+        /* --- ОПИСАНИЕ --- */
         .desc { 
             font-size: 13px; 
             line-height: 1.4; 
@@ -217,19 +237,13 @@
             padding-right: 4px;
         }
 
-        .desc::-webkit-scrollbar {
-            width: 4px;
-        }
-        .desc::-webkit-scrollbar-track {
-            background: transparent;
-        }
+        .desc::-webkit-scrollbar { width: 4px; }
+        .desc::-webkit-scrollbar-track { background: transparent; }
         .desc::-webkit-scrollbar-thumb {
             background: #3a3a3c;
             border-radius: 10px;
         }
-        .desc::-webkit-scrollbar-thumb:hover {
-            background: var(--accent);
-        }
+        .desc::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
         #toast {
             position: fixed;
@@ -287,6 +301,23 @@
 
         const codeMap = { 'UK': 'uk', 'AK': 'ak', 'DK': 'dk' };
 
+        // Хелпер для форматирования значений таблицы
+        const formatData = (val) => {
+            if (!val || val === "—" || val === "-" || val.trim() === "") {
+                return `<span class="info-val empty">—</span>`;
+            }
+            return `<span class="info-val" title="${val}">${val}</span>`;
+        };
+
+        // Хелпер для судимости (подсветка красным, если есть)
+        const formatFelony = (val) => {
+            if (!val || val === "—" || val === "-" || val.trim() === "") {
+                return `<span class="info-val empty">—</span>`;
+            }
+            let text = val.toLowerCase().includes("судимость") ? "Да" : val;
+            return `<span class="info-val danger" title="${text}">${text}</span>`;
+        };
+
         async function loadData() {
             try {
                 const response = await fetch(TIMEOUT_URL);
@@ -317,20 +348,6 @@
                     if (!codeMap[rawCode] || !num) return;
 
                     let codeType = codeMap[rawCode];
-                    let badges = [];
-
-                    if (fine && fine !== "—" && fine !== "-") {
-                        badges.push(`<span class="badge">💰 Штраф: ${fine}</span>`);
-                    }
-                    if (arrest && arrest !== "—" && arrest !== "-") {
-                        badges.push(`<span class="badge">🕒 Арест: ${arrest}</span>`);
-                    }
-                    if (extraMeasure && extraMeasure !== "—" && extraMeasure !== "-") {
-                        badges.push(`<span class="badge">⚠️ ${extraMeasure}</span>`);
-                    }
-                    if (felony && felony.toLowerCase().includes("судимость")) {
-                        badges.push(`<span class="badge danger">⚖️ Судимость</span>`);
-                    }
 
                     let starDisplay = "";
                     if (stars && stars !== "—" && stars !== "-") {
@@ -349,7 +366,10 @@
                             title: title || (desc.split(/[.\n]/)[0].trim() + '.'), 
                             desc: desc || title,
                             stars: starDisplay,
-                            badges: badges
+                            fine: fine,
+                            arrest: arrest,
+                            felony: felony,
+                            extraMeasure: extraMeasure
                         });
                     }
                 });
@@ -378,9 +398,6 @@
                         const card = document.createElement('div');
                         card.className = `card ${article.code}`;
                         
-                        let badgesHtml = article.badges.join('');
-                        
-                        // Обратите внимание на строку со звездами - контейнер теперь есть всегда
                         card.innerHTML = `
                             <div class="card-header">
                                 <div class="title">${article.title}</div>
@@ -388,10 +405,27 @@
                                     <div class="article-num" title="Нажмите, чтобы скопировать" onclick="copyToClipboard('${article.num} ${article.code.toUpperCase()} - ${article.title}')">
                                         ст. ${article.num}
                                     </div>
-                                    <div class="stars">${article.stars || ''}</div>
+                                    <div class="stars">${article.stars || '<span style="opacity:0">—</span>'}</div>
                                 </div>
                             </div>
-                            <div class="punishment">${badgesHtml}</div>
+                            <div class="info-table">
+                                <div class="info-row">
+                                    <div class="info-label">Штраф</div>
+                                    ${formatData(article.fine)}
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Арест</div>
+                                    ${formatData(article.arrest)}
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Судимость</div>
+                                    ${formatFelony(article.felony)}
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Доп. мера</div>
+                                    ${formatData(article.extraMeasure)}
+                                </div>
+                            </div>
                             <div class="desc">${article.desc.replace(/\n/g, '<br>')}</div>
                         `;
                         container.appendChild(card);
