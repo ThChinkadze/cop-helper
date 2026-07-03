@@ -19,7 +19,7 @@
             --dk-color: #007aff;
             --success: #34c759;
             
-            /* Увеличили высоту для комфортного размещения таблицы-досье */
+            /* Фиксированная высота всей карточки */
             --card-height: 350px; 
         }
 
@@ -105,11 +105,11 @@
             box-sizing: border-box;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
             
-            /* Жесткая сетка: Заголовок (50px), Таблица (115px), Описание (всё остальное) */
             display: grid;
             height: var(--card-height);
-            grid-template-rows: max-content max-content 1fr;
-            gap: 12px;
+            /* max-content позволяет шапке и таблице расширяться, если текст длинный */
+            grid-template-rows: max-content max-content 1fr; 
+            gap: 12px; 
         }
         
         .card:hover { 
@@ -166,14 +166,6 @@
             color: white; 
             border-color: var(--accent);
         }
-
-        .stars { 
-            color: var(--stars); 
-            font-size: 11px; 
-            letter-spacing: 1px;
-            line-height: 1;
-            min-height: 11px; /* Защита от прыжков, если звезд нет */
-        }
         
         /* --- ТАБЛИЦА НАКАЗАНИЙ (ДОСЬЕ) --- */
         .info-table {
@@ -190,11 +182,11 @@
         .info-row {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: flex-start; /* Выравнивание по верхнему краю для длинных значений */
+            gap: 10px;
             font-size: 13px;
             border-bottom: 1px dashed #3a3a3c;
             padding-bottom: 4px;
-            gap: 10px;
         }
         
         .info-row:last-child {
@@ -212,7 +204,8 @@
             color: #ffffff;
             font-weight: 800;
             text-align: right;
-            max-width: 70%; /* Не дает длинным значениям сломать верстку */
+            max-width: 70%;
+            /* Перенос длинного текста */
             white-space: normal;
             word-break: break-word;
         }
@@ -302,7 +295,7 @@
 
         const codeMap = { 'UK': 'uk', 'AK': 'ak', 'DK': 'dk' };
 
-        // Хелпер для форматирования значений таблицы
+        // Хелпер для форматирования обычных значений
         const formatData = (val) => {
             if (!val || val === "—" || val === "-" || val.trim() === "") {
                 return `<span class="info-val empty">—</span>`;
@@ -310,13 +303,21 @@
             return `<span class="info-val" title="${val}">${val}</span>`;
         };
 
-        // Хелпер для судимости (подсветка красным, если есть)
+        // Хелпер для судимости (подсветка)
         const formatFelony = (val) => {
             if (!val || val === "—" || val === "-" || val.trim() === "") {
                 return `<span class="info-val empty">—</span>`;
             }
             let text = val.toLowerCase().includes("судимость") ? "Да" : val;
             return `<span class="info-val danger" title="${text}">${text}</span>`;
+        };
+
+        // Хелпер для звёзд розыска
+        const formatStars = (val) => {
+            if (!val || val === "—" || val === "-" || val.trim() === "") {
+                return `<span class="info-val empty">—</span>`;
+            }
+            return `<span class="info-val" style="color: var(--stars); letter-spacing: 2px; font-size: 14px;">${val}</span>`;
         };
 
         async function loadData() {
@@ -406,13 +407,16 @@
                                     <div class="article-num" title="Нажмите, чтобы скопировать" onclick="copyToClipboard('${article.num} ${article.code.toUpperCase()} - ${article.title}')">
                                         ст. ${article.num}
                                     </div>
-                                    <div class="stars">${article.stars || '<span style="opacity:0">—</span>'}</div>
                                 </div>
                             </div>
                             <div class="info-table">
                                 <div class="info-row">
                                     <div class="info-label">Штраф</div>
                                     ${formatData(article.fine)}
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Розыск</div>
+                                    ${formatStars(article.stars)}
                                 </div>
                                 <div class="info-row">
                                     <div class="info-label">Арест</div>
