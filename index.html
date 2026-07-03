@@ -345,7 +345,10 @@
                     let arrest = getVal(7);               
                     let felony = getVal(8);               
 
-                    if (!codeMap[rawCode] || !num) return;
+                    if (!codeMap[rawCode] || num === "") {
+                        console.log("Пропуск строки, так как нет кода или номера:", row);
+                        return;
+                    }
 
                     let codeType = codeMap[rawCode];
 
