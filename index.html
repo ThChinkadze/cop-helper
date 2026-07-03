@@ -186,11 +186,11 @@
         const toast = document.getElementById('toast');
         const tabButtons = document.querySelectorAll('.tab-btn');
 
-        // Соответствие обозначений в таблице с идентификаторами вкладок
+        // Универсальное соответствие кодов (и латиница, и кириллица)
         const codeMap = {
             'UK': 'uk',
-            'DK': 'ak',
-            'DK': 'dk'
+            'AK': 'ak',
+            'DK': 'dk',
         };
 
         async function loadData() {
@@ -210,7 +210,7 @@
                     const cells = row.c;
                     const getVal = (idx) => (cells[idx] && cells[idx].v !== null) ? String(cells[idx].v).trim() : "";
 
-                    // Чтение колонок по фактической структуре CSV-файла:
+                    // Чтение колонок по фактической структуре таблицы:
                     // 0:Кодекс, 1:Статья, 2:Заголовок, 3:Описание, 4:Звёзды, 5:Доп_мера, 6:Штраф, 7:Арест, 8:Судимость
                     let rawCode = getVal(0).toUpperCase(); 
                     let num = getVal(1);                  
@@ -222,13 +222,11 @@
                     let arrest = getVal(7);               
                     let felony = getVal(8);               
 
-                    // Если кодекс не входит в наш список (УК, АК, ДК) или нет статьи — пропускаем
                     if (!codeMap[rawCode] || !num) return;
 
                     let codeType = codeMap[rawCode];
                     let badges = [];
 
-                    // Собираем меры наказания в бейджи
                     if (fine && fine !== "—" && fine !== "-") {
                         badges.push(`<span class="badge">💰 Штраф: ${fine}</span>`);
                     }
@@ -242,7 +240,6 @@
                         badges.push(`<span class="badge danger">⚖️ Судимость</span>`);
                     }
 
-                    // Перевод текста звезд в графический вид, если они указаны цифрой или текстом
                     let starDisplay = "";
                     if (stars && stars !== "—" && stars !== "-") {
                         if (stars.includes('★')) {
@@ -253,12 +250,12 @@
                         }
                     }
 
-                    if (desc) {
+                    if (desc || title) {
                         parsedDatabase.push({
                             code: codeType,
                             num: num,
-                            title: title || (desc.split(/[.\n]/)[0].trim() + '.'), // Запасной вариант названия, если колонка пуста
-                            desc: desc,
+                            title: title || (desc.split(/[.\n]/)[0].trim() + '.'), 
+                            desc: desc || title,
                             stars: starDisplay,
                             badges: badges
                         });
