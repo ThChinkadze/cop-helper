@@ -17,7 +17,6 @@
             --uk-color: #e51400;
             --ak-color: #d77a00;
             --dk-color: #2b78e4;
-            --proc-color: #8e44ad;
             --success: #60a917;
         }
 
@@ -32,7 +31,6 @@
             align-items: center;
         }
 
-        /* Исправлено: Контейнер жестко держит фон и не просвечивает при скролле */
         .controls-container {
             width: 100%;
             max-width: 900px;
@@ -82,9 +80,8 @@
 
         .tab-btn:hover { background-color: #4a4a4a; color: #fff; }
         .tab-btn[data-code="uk"].active { background-color: var(--uk-color); color: white; }
-        .tab-btn[data-code="ak"].active { background-color: var(--warning || var(--ak-color)); color: white; }
+        .tab-btn[data-code="ak"].active { background-color: var(--ak-color); color: white; }
         .tab-btn[data-code="dk"].active { background-color: var(--dk-color); color: white; }
-        .tab-btn[data-code="proc"].active { background-color: var(--proc-color); color: white; }
 
         #articlesContainer {
             display: grid;
@@ -110,7 +107,6 @@
         .card.uk { border-left: 5px solid var(--uk-color); }
         .card.ak { border-left: 5px solid var(--ak-color); }
         .card.dk { border-left: 5px solid var(--dk-color); }
-        .card.proc { border-left: 5px solid var(--proc-color); }
 
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         
@@ -129,6 +125,12 @@
             font-size: 12px;
             font-weight: 600;
             color: #ffffff;
+        }
+        
+        .badge.danger {
+            background-color: #721c24;
+            color: #f8d7da;
+            border: 1px solid #f5c6cb;
         }
 
         #toast {
@@ -161,7 +163,6 @@
             <button class="tab-btn active" data-code="uk">Уголовный кодекс</button>
             <button class="tab-btn" data-code="ak">Административный кодекс</button> 
             <button class="tab-btn" data-code="dk">Дорожный кодекс</button>
-            <button class="tab-btn" data-code="proc">Процессуальный кодекс</button>
         </div>
     </div>
 
@@ -172,7 +173,6 @@
     <div id="toast">Скопировано в буфер!</div>
 
     <script>
-        // ВСТАВЬ СЮДА ID СВОЕЙ ТАБЛИЦЫ
         const SHEET_ID = '1ECGNHLbqR8KuPV_QH1E0SO8mGUOm4WIYP-hWWR5PZ-U'; 
         const SHEET_NAME = encodeURIComponent('Законадательная база'); 
         
@@ -186,6 +186,13 @@
         const toast = document.getElementById('toast');
         const tabButtons = document.querySelectorAll('.tab-btn');
 
+        // Соответствие обозначений в таблице с идентификаторами вкладок
+        const codeMap = {
+            'УК': 'uk',
+            'АК': 'ak',
+            'ДК': 'dk'
+        };
+
         async function loadData() {
             try {
                 const response = await fetch(TIMEOUT_URL);
@@ -198,69 +205,60 @@
                 parsedDatabase = [];
 
                 rows.forEach((row, index) => {
-                    if (index === 0) return;
+                    if (index === 0 || !row.c) return; 
                     
                     const cells = row.c;
                     const getVal = (idx) => (cells[idx] && cells[idx].v !== null) ? String(cells[idx].v).trim() : "";
 
-                    // --- СБОРКА ЛЕВОЙ СТОРОНЫ (ДК, АК, ПК) ---
-                    let leftNum = getVal(0);
-                    let leftDesc = getVal(1);
-                    let leftPunish = getVal(2);
+                    // Чтение колонок по фактической структуре CSV-файла:
+                    // 0:Кодекс, 1:Статья, 2:Заголовок, 3:Описание, 4:Звёзды, 5:Доп_мера, 6:Штраф, 7:Арест, 8:Судимость
+                    let rawCode = getVal(0).toUpperCase(); 
+                    let num = getVal(1);                  
+                    let title = getVal(2);                
+                    let desc = getVal(3);                 
+                    let stars = getVal(4);                
+                    let extraMeasure = getVal(5);         
+                    let fine = getVal(6);                 
+                    let arrest = getVal(7);               
+                    let felony = getVal(8);               
 
-                    if (leftNum && !leftNum.startsWith("Статья") && !leftNum.includes("КОДЕКС") && !leftNum.includes("ПОРЯДОК")) {
-                        let codeType = "dk"; // По умолчанию ДК
-                        
-                        // Улучшенный алгоритм сортировки левой стороны
-                        let isProc = leftNum.includes(')') || leftNum.toLowerCase().includes('этап') || leftNum.toLowerCase().includes('стадия') || (parseInt(leftNum) > 0 && !leftPunish);
-                        let isAk = leftNum.startsWith('5.') || leftNum.startsWith('7.') || leftNum.startsWith('8.') || leftNum.startsWith('9.') || leftNum.startsWith('11.') || leftNum.startsWith('Глава');
+                    // Если кодекс не входит в наш список (УК, АК, ДК) или нет статьи — пропускаем
+                    if (!codeMap[rawCode] || !num) return;
 
-                        if (isProc) {
-                            codeType = "proc";
-                        } else if (isAk) {
-                            codeType = "ak";
-                        }
+                    let codeType = codeMap[rawCode];
+                    let badges = [];
 
-                        if (leftDesc) {
-                            parsedDatabase.push({
-                                code: codeType,
-                                num: leftNum,
-                                title: leftDesc.split(/[.\n]/)[0] + '.',
-                                desc: leftDesc,
-                                stars: "",
-                                badges: leftPunish ? [leftPunish] : []
-                            });
+                    // Собираем меры наказания в бейджи
+                    if (fine && fine !== "—" && fine !== "-") {
+                        badges.push(`<span class="badge">💰 Штраф: ${fine}</span>`);
+                    }
+                    if (arrest && arrest !== "—" && arrest !== "-") {
+                        badges.push(`<span class="badge">🕒 Арест: ${arrest}</span>`);
+                    }
+                    if (extraMeasure && extraMeasure !== "—" && extraMeasure !== "-") {
+                        badges.push(`<span class="badge">⚠️ ${extraMeasure}</span>`);
+                    }
+                    if (felony && felony.toLowerCase().includes("судимость")) {
+                        badges.push(`<span class="badge danger">⚖️ Судимость</span>`);
+                    }
+
+                    // Перевод текста звезд в графический вид, если они указаны цифрой или текстом
+                    let starDisplay = "";
+                    if (stars && stars !== "—" && stars !== "-") {
+                        if (stars.includes('★')) {
+                            starDisplay = stars;
+                        } else {
+                            let starCount = parseInt(stars.replace(/[^0-9]/g, '')) || 0;
+                            starDisplay = '★'.repeat(starCount);
                         }
                     }
 
-                    // --- СБОРКА ПРАВОЙ СТОРОНЫ (УК) ---
-                    let ukNum = getVal(3);
-                    let ukDesc = getVal(4);
-                    let ukStars = getVal(5);
-                    let ukFine = getVal(6);
-                    let ukJail = getVal(7);
-
-                    if (ukNum && !ukNum.startsWith("Статья") && !ukNum.includes("УГОЛОВНЫЙ")) {
-                        let badges = [];
-                        if (ukFine && ukFine !== "—" && ukFine !== "-") badges.push(`💰 Штраф: ${ukFine}`);
-                        if (ukJail) badges.push(`🕒 Срок: ${ukJail}`);
-
-                        // Корректно переводим числовые звезды в графические ★★★
-                        let starDisplay = "";
-                        if (ukStars) {
-                            if (ukStars.includes('★')) {
-                                starDisplay = ukStars;
-                            } else {
-                                let starCount = parseInt(ukStars.replace(/[^0-9]/g, '')) || 0;
-                                starDisplay = '★'.repeat(starCount);
-                            }
-                        }
-
+                    if (desc) {
                         parsedDatabase.push({
-                            code: "uk",
-                            num: ukNum,
-                            title: ukDesc.split(/[.\n]/)[0] + '.',
-                            desc: ukDesc,
+                            code: codeType,
+                            num: num,
+                            title: title || (desc.split(/[.\n]/)[0].trim() + '.'), // Запасной вариант названия, если колонка пуста
+                            desc: desc,
                             stars: starDisplay,
                             badges: badges
                         });
@@ -270,43 +268,46 @@
                 renderArticles();
             } catch (error) {
                 console.error(error);
-                container.innerHTML = `<div class="loader" style="color:var(--uk-color)">Ошибка подключения. Убедитесь, что таблица доступна «Всем, у кого есть ссылка».</div>`;
+                container.innerHTML = `<div class="loader" style="color:var(--uk-color)">Ошибка подключения. Убедитесь, что таблица доступна по ссылке («Все, у кого есть ссылка — Читатель»).</div>`;
             }
         }
 
         function renderArticles() {
             container.innerHTML = "";
-            const filterText = searchInput.value.toLowerCase();
+            const filterText = searchInput.value.toLowerCase().trim();
             let count = 0;
 
             parsedDatabase.forEach(article => {
-                if (article.code === currentCode && 
-                   (article.num.toLowerCase().includes(filterText) || 
-                    article.desc.toLowerCase().includes(filterText) ||
-                    article.title.toLowerCase().includes(filterText))) {
-                    
-                    count++;
-                    const card = document.createElement('div');
-                    card.className = `card ${article.code}`;
-                    
-                    let badgesHtml = article.badges.map(b => `<span class="badge">${b}</span>`).join('');
-                    
-                    card.innerHTML = `
-                        <div class="card-header">
-                            <div class="article-num" onclick="copyToClipboard('${article.num} ${article.code.toUpperCase()} - ${article.title}')">
-                                ${article.num}
+                if (article.code === currentCode) {
+                    const matchesSearch = !filterText || 
+                                          article.num.toLowerCase().includes(filterText) || 
+                                          article.desc.toLowerCase().includes(filterText) ||
+                                          article.title.toLowerCase().includes(filterText);
+
+                    if (matchesSearch) {
+                        count++;
+                        const card = document.createElement('div');
+                        card.className = `card ${article.code}`;
+                        
+                        let badgesHtml = article.badges.join('');
+                        
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <div class="article-num" onclick="copyToClipboard('${article.num} ${article.code.toUpperCase()} - ${article.title}')">
+                                    ${article.num}
+                                </div>
+                                ${article.stars ? `<div class="stars">${article.stars}</div>` : ''}
                             </div>
-                            ${article.stars ? `<div class="stars">${article.stars}</div>` : ''}
-                        </div>
-                        <div class="title">${article.title}</div>
-                        <div class="desc">${article.desc.replace(/\n/g, '<br>')}</div>
-                        <div class="punishment">${badgesHtml}</div>
-                    `;
-                    container.appendChild(card);
+                            <div class="title">${article.title}</div>
+                            <div class="desc">${article.desc.replace(/\n/g, '<br>')}</div>
+                            <div class="punishment">${badgesHtml}</div>
+                        `;
+                        container.appendChild(card);
+                    }
                 }
             });
 
-            if(count === 0) {
+            if (count === 0) {
                 container.innerHTML = `<div class="loader">Ничего не найдено...</div>`;
             }
         }
@@ -324,6 +325,8 @@
             navigator.clipboard.writeText(text).then(() => {
                 toast.style.opacity = 1;
                 setTimeout(() => toast.style.opacity = 0, 1500);
+            }).catch(err => {
+                console.error('Не удалось скопировать: ', err);
             });
         }
 
