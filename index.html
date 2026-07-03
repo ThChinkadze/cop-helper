@@ -18,246 +18,35 @@
             --ak-color: #ff9500;
             --dk-color: #007aff;
             --success: #34c759;
-            
-            /* Фиксированная высота всей карточки */
             --card-height: 350px; 
         }
 
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .controls-container {
-            width: 100%;
-            max-width: 900px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            padding-top: 10px;
-            padding-bottom: 20px;
-        }
-
-        #searchInput {
-            width: 100%;
-            padding: 16px 20px;
-            font-size: 18px;
-            font-family: 'Nunito', sans-serif;
-            background-color: #2c2c2e;
-            color: white;
-            border: 2px solid transparent;
-            border-radius: 10px;
-            outline: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            transition: border-color 0.2s;
-            box-sizing: border-box;
-            margin-bottom: 15px;
-        }
-
+        body { font-family: 'Nunito', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .controls-container { width: 100%; max-width: 900px; position: sticky; top: 0; z-index: 100; padding-top: 10px; padding-bottom: 20px; }
+        #searchInput { width: 100%; padding: 16px 20px; font-size: 18px; font-family: 'Nunito', sans-serif; background-color: #2c2c2e; color: white; border: 2px solid transparent; border-radius: 10px; outline: none; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: border-color 0.2s; box-sizing: border-box; margin-bottom: 15px; }
         #searchInput:focus { border-color: var(--accent); }
-
         .tabs { display: flex; gap: 10px; width: 100%; overflow-x: auto; padding-bottom: 5px; }
-
-        .tab-btn {
-            flex: 1;
-            padding: 14px;
-            font-family: 'Nunito', sans-serif;
-            font-size: 15px;
-            font-weight: 800;
-            background-color: #2c2c2e;
-            color: #8e8e93;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-
+        .tab-btn { flex: 1; padding: 14px; font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; background-color: #2c2c2e; color: #8e8e93; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
         .tab-btn:hover { background-color: #3a3a3c; color: #fff; }
         .tab-btn[data-code="uk"].active { background-color: var(--uk-color); color: white; }
         .tab-btn[data-code="ak"].active { background-color: var(--ak-color); color: white; }
         .tab-btn[data-code="dk"].active { background-color: var(--dk-color); color: white; }
-
-        #articlesContainer {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            gap: 20px;
-            width: 100%;
-            max-width: 1300px;
-            margin-top: 10px;
-        }
-
-        /* --- СТРОГИЙ ШАБЛОН КАРТОЧКИ --- */
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-            border: 1px solid #2c2c2e;
-            box-sizing: border-box;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            
-            display: grid;
-            height: var(--card-height);
-            /* max-content позволяет шапке и таблице расширяться, если текст длинный */
-            grid-template-rows: max-content max-content 1fr; 
-            gap: 12px; 
-        }
-        
-        .card:hover { 
-            transform: translateY(-3px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
-        }
-
+        #articlesContainer { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; width: 100%; max-width: 1300px; margin-top: 10px; }
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 6px 12px rgba(0,0,0,0.3); border: 1px solid #2c2c2e; box-sizing: border-box; display: grid; height: var(--card-height); grid-template-rows: max-content max-content 1fr; gap: 12px; }
         .card.uk { border-left: 6px solid var(--uk-color); }
         .card.ak { border-left: 6px solid var(--ak-color); }
         .card.dk { border-left: 6px solid var(--dk-color); }
-
-        .card-header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start;
-            gap: 12px;
-            overflow: hidden;
-        }
-        
-        .title { 
-            font-size: 16px; 
-            font-weight: 800; 
-            color: var(--text-title); 
-            line-height: 1.3;
-            margin: 0;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        .meta-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-
-        .article-num { 
-            font-size: 13px; 
-            font-weight: 700; 
-            color: #e2e2e6; 
-            background-color: #2c2c2e;
-            padding: 4px 8px;
-            border-radius: 6px;
-            border: 1px solid #3a3a3c;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-        }
-        .article-num:hover { 
-            background-color: var(--accent); 
-            color: white; 
-            border-color: var(--accent);
-        }
-        
-        /* --- ТАБЛИЦА НАКАЗАНИЙ (ДОСЬЕ) --- */
-        .info-table {
-            background-color: #262628;
-            border-radius: 8px;
-            padding: 10px 12px;
-            border: 1px solid #3a3a3c;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            justify-content: space-between;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start; /* Выравнивание по верхнему краю для длинных значений */
-            gap: 10px;
-            font-size: 13px;
-            border-bottom: 1px dashed #3a3a3c;
-            padding-bottom: 4px;
-        }
-        
-        .info-row:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .info-label {
-            color: #8e8e93;
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-
-        .info-val {
-            color: #ffffff;
-            font-weight: 800;
-            text-align: right;
-            max-width: 70%;
-            /* Перенос длинного текста */
-            white-space: normal;
-            word-break: break-word;
-        }
-
-        .info-val.empty {
-            color: #555555;
-            font-weight: 400;
-        }
-
-        .info-val.danger {
-            color: var(--uk-color);
-        }
-
-        /* --- ОПИСАНИЕ --- */
-        .desc { 
-            font-size: 13px; 
-            line-height: 1.4; 
-            color: var(--text-main); 
-            margin: 0;
-            padding-top: 8px;
-            border-top: 1px solid #252525;
-            overflow-y: auto; 
-            padding-right: 4px;
-        }
-
-        .desc::-webkit-scrollbar { width: 4px; }
-        .desc::-webkit-scrollbar-track { background: transparent; }
-        .desc::-webkit-scrollbar-thumb {
-            background: #3a3a3c;
-            border-radius: 10px;
-        }
-        .desc::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-
-        #toast {
-            position: fixed;
-            bottom: 20px;
-            background: var(--success);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        .loader {
-            text-align: center;
-            font-size: 18px;
-            margin-top: 50px;
-            grid-column: 1 / -1;
-        }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; overflow: hidden; }
+        .title { font-size: 16px; font-weight: 800; color: var(--text-title); line-height: 1.3; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .article-num { font-size: 13px; font-weight: 700; color: #e2e2e6; background-color: #2c2c2e; padding: 4px 8px; border-radius: 6px; border: 1px solid #3a3a3c; cursor: pointer; }
+        .info-table { background-color: #262628; border-radius: 8px; padding: 10px 12px; border: 1px solid #3a3a3c; display: flex; flex-direction: column; gap: 6px; }
+        .info-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-size: 13px; border-bottom: 1px dashed #3a3a3c; padding-bottom: 4px; }
+        .info-label { color: #8e8e93; font-weight: 600; flex-shrink: 0; }
+        .info-val { color: #ffffff; font-weight: 800; text-align: right; max-width: 70%; white-space: normal; word-break: break-word; }
+        .info-val.empty { color: #555555; font-weight: 400; }
+        .info-val.danger { color: var(--uk-color); }
+        .desc { font-size: 13px; line-height: 1.4; color: var(--text-main); margin: 0; padding-top: 8px; border-top: 1px solid #252525; overflow-y: auto; }
+        .loader { text-align: center; font-size: 18px; margin-top: 50px; grid-column: 1 / -1; }
     </style>
 </head>
 <body>
@@ -271,202 +60,80 @@
         </div>
     </div>
 
-    <div id="articlesContainer">
-        <div class="loader">Синхронизация данных с таблицей...</div>
-    </div>
-
-    <div id="toast">Скопировано в буфер!</div>
+    <div id="articlesContainer"><div class="loader">Синхронизация данных...</div></div>
 
     <script>
         const SHEET_ID = '1ECGNHLbqR8KuPV_QH1E0SO8mGUOm4WIYP-hWWR5PZ-U'; 
         const SHEET_NAME = encodeURIComponent('База данных'); 
-        
         const TIMEOUT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_NAME}&headers=0`;
 
         let parsedDatabase = [];
         let currentCode = "uk";
         
-        const container = document.getElementById('articlesContainer');
-        const searchInput = document.getElementById('searchInput');
-        const toast = document.getElementById('toast');
-        const tabButtons = document.querySelectorAll('.tab-btn');
-
-        const codeMap = { 'UK': 'uk', 'AK': 'ak', 'DK': 'dk' };
-
-        // Хелпер для форматирования обычных значений
-        const formatData = (val) => {
-            if (!val || val === "—" || val === "-" || val.trim() === "") {
-                return `<span class="info-val empty">—</span>`;
-            }
-            return `<span class="info-val" title="${val}">${val}</span>`;
-        };
-
-        // Хелпер для судимости (подсветка)
-        const formatFelony = (val) => {
-            if (!val || val === "—" || val === "-" || val.trim() === "") {
-                return `<span class="info-val empty">—</span>`;
-            }
-            let text = val.toLowerCase().includes("судимость") ? "Да" : val;
-            return `<span class="info-val danger" title="${text}">${text}</span>`;
-        };
-
-        // Хелпер для звёзд розыска
-        const formatStars = (val) => {
-            if (!val || val === "—" || val === "-" || val.trim() === "") {
-                return `<span class="info-val empty">—</span>`;
-            }
-            return `<span class="info-val" style="color: var(--stars); letter-spacing: 2px; font-size: 14px;">${val}</span>`;
-        };
-
         async function loadData() {
             try {
                 const response = await fetch(TIMEOUT_URL);
                 const text = await response.text();
-                
-                const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-                const json = JSON.parse(jsonString);
+                const json = JSON.parse(text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1));
                 const rows = json.table.rows;
 
                 parsedDatabase = [];
-
-                rows.forEach((row, index) => {
-                    if (index === 0 || !row.c) return; 
-                    
+                rows.forEach((row) => {
+                    if (!row.c) return;
                     const cells = row.c;
-                    const getVal = (idx) => {
-                        if (!cells[idx]) return "";
-                        const val = cells[idx].f || cells[idx].v;
-                        return val !== null ? String(val).trim() : "";
-                    }
+                    const getVal = (idx) => (cells[idx] && (cells[idx].f || cells[idx].v !== null)) ? String(cells[idx].f || cells[idx].v).trim() : "";
 
-                    let rawCode = getVal(0).toUpperCase(); 
-                    let num = String(getVal(1)).replace(/[^0-9.]/g, '');                  
-                    let title = getVal(2);                
-                    let desc = getVal(3);                 
-                    let stars = getVal(4);                
-                    let extraMeasure = getVal(5);         
-                    let fine = getVal(6);                 
-                    let arrest = getVal(7);               
-                    let felony = getVal(8);               
+                    let rawCode = getVal(0).toUpperCase();
+                    if (rawCode === "КОДЕКС" || !{'UK':'uk','AK':'ak','DK':'dk'}[rawCode]) return;
 
-                    if (!codeMap[rawCode] || num === "") {
-                        console.log("Пропуск строки, так как нет кода или номера:", row);
-                        return;
-                    }
-
-                    let codeType = codeMap[rawCode];
-
-                    let starDisplay = "";
-                    if (stars && stars !== "—" && stars !== "-") {
-                        if (stars.includes('★')) {
-                            starDisplay = stars;
-                        } else {
-                            let starCount = parseInt(stars.replace(/[^0-9]/g, '')) || 0;
-                            starDisplay = '★'.repeat(starCount);
-                        }
-                    }
-
-                    if (desc || title) {
-                        parsedDatabase.push({
-                            code: codeType,
-                            num: num,
-                            title: title || (desc.split(/[.\n]/)[0].trim() + '.'), 
-                            desc: desc || title,
-                            stars: starDisplay,
-                            fine: fine,
-                            arrest: arrest,
-                            felony: felony,
-                            extraMeasure: extraMeasure
-                        });
-                    }
+                    parsedDatabase.push({
+                        code: {'UK':'uk','AK':'ak','DK':'dk'}[rawCode],
+                        num: getVal(1),
+                        title: getVal(2) || (getVal(3).split(/[.\n]/)[0].trim() + '.'),
+                        desc: getVal(3) || getVal(2),
+                        stars: getVal(4),
+                        extraMeasure: getVal(5),
+                        fine: getVal(6),
+                        arrest: getVal(7),
+                        felony: getVal(8)
+                    });
                 });
-
                 renderArticles();
-            } catch (error) {
-                console.error(error);
-                container.innerHTML = `<div class="loader" style="color:var(--uk-color)">Ошибка подключения.</div>`;
-            }
+            } catch (e) { console.error(e); }
         }
 
         function renderArticles() {
+            const container = document.getElementById('articlesContainer');
             container.innerHTML = "";
-            const filterText = searchInput.value.toLowerCase().trim();
-            let count = 0;
-
-            parsedDatabase.forEach(article => {
-                if (article.code === currentCode) {
-                    const matchesSearch = !filterText || 
-                                          article.num.toLowerCase().includes(filterText) || 
-                                          article.desc.toLowerCase().includes(filterText) ||
-                                          article.title.toLowerCase().includes(filterText);
-
-                    if (matchesSearch) {
-                        count++;
-                        const card = document.createElement('div');
-                        card.className = `card ${article.code}`;
-                        
-                        card.innerHTML = `
-                            <div class="card-header">
-                                <div class="title">${article.title}</div>
-                                <div class="meta-right">
-                                    <div class="article-num" title="Нажмите, чтобы скопировать" onclick="copyToClipboard('${article.num} ${article.code.toUpperCase()} - ${article.title}')">
-                                        ст. ${article.num}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="info-table">
-                                <div class="info-row">
-                                    <div class="info-label">Штраф</div>
-                                    ${formatData(article.fine)}
-                                </div>
-                                <div class="info-row">
-                                    <div class="info-label">Розыск</div>
-                                    ${formatStars(article.stars)}
-                                </div>
-                                <div class="info-row">
-                                    <div class="info-label">Арест</div>
-                                    ${formatData(article.arrest)}
-                                </div>
-                                <div class="info-row">
-                                    <div class="info-label">Судимость</div>
-                                    ${formatFelony(article.felony)}
-                                </div>
-                                <div class="info-row">
-                                    <div class="info-label">Доп. мера</div>
-                                    ${formatData(article.extraMeasure)}
-                                </div>
-                            </div>
-                            <div class="desc">${article.desc.replace(/\n/g, '<br>')}</div>
-                        `;
-                        container.appendChild(card);
-                    }
-                }
-            });
-
-            if (count === 0) {
-                container.innerHTML = `<div class="loader">Ничего не найдено...</div>`;
-            }
-        }
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-                currentCode = button.getAttribute('data-code');
-                renderArticles();
-            });
-        });
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                toast.style.opacity = 1;
-                setTimeout(() => toast.style.opacity = 0, 1500);
-            }).catch(err => {
-                console.error('Не удалось скопировать: ', err);
+            const filter = document.getElementById('searchInput').value.toLowerCase();
+            parsedDatabase.filter(a => a.code === currentCode && (a.num.toLowerCase().includes(filter) || a.desc.toLowerCase().includes(filter))).forEach(article => {
+                const card = document.createElement('div');
+                card.className = `card ${article.code}`;
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="title">${article.title}</div>
+                        <div class="article-num">ст. ${article.num}</div>
+                    </div>
+                    <div class="info-table">
+                        <div class="info-row"><div class="info-label">Штраф</div><div class="info-val">${article.fine || '—'}</div></div>
+                        <div class="info-row"><div class="info-label">Розыск</div><div class="info-val">${article.stars || '—'}</div></div>
+                        <div class="info-row"><div class="info-label">Арест</div><div class="info-val">${article.arrest || '—'}</div></div>
+                        <div class="info-row"><div class="info-label">Судимость</div><div class="info-val ${article.felony.toLowerCase().includes('судимость') ? 'danger' : ''}">${article.felony || '—'}</div></div>
+                        <div class="info-row"><div class="info-label">Доп. мера</div><div class="info-val">${article.extraMeasure || '—'}</div></div>
+                    </div>
+                    <div class="desc">${article.desc.replace(/\n/g, '<br>')}</div>
+                `;
+                container.appendChild(card);
             });
         }
 
-        searchInput.addEventListener('input', renderArticles);
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentCode = e.target.getAttribute('data-code');
+            renderArticles();
+        }));
+
         loadData();
     </script>
 </body>
