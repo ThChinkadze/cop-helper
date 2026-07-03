@@ -114,16 +114,19 @@
         .article-num:hover { color: var(--accent); }
         
         .stars { color: var(--stars); font-size: 18px; letter-spacing: 2px; }
-        .title { font-size: 16px; font-weight: 600; margin-bottom: 10px; color: var(--text-title); }
+        
+        /* Сделали заголовок жирным (800) */
+        .title { font-size: 16px; font-weight: 800; margin-bottom: 10px; color: var(--text-title); }
         .desc { font-size: 14px; line-height: 1.5; margin-bottom: 15px; flex-grow: 1; }
         .punishment { display: flex; gap: 8px; flex-wrap: wrap; }
         
+        /* Сделали текст внутри бейджей наказаний супер-жирным (800) */
         .badge {
             background-color: #3c3c3c;
             padding: 6px 12px;
             border-radius: 5px;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 800; 
             color: #ffffff;
         }
         
@@ -186,7 +189,7 @@
         const toast = document.getElementById('toast');
         const tabButtons = document.querySelectorAll('.tab-btn');
 
-        // Универсальное соответствие кодов (и латиница, и кириллица)
+        // Исправленная и надежная привязка кодексов
         const codeMap = {
             'UK': 'uk',
             'AK': 'ak',
@@ -210,8 +213,6 @@
                     const cells = row.c;
                     const getVal = (idx) => (cells[idx] && cells[idx].v !== null) ? String(cells[idx].v).trim() : "";
 
-                    // Чтение колонок по фактической структуре таблицы:
-                    // 0:Кодекс, 1:Статья, 2:Заголовок, 3:Описание, 4:Звёзды, 5:Доп_мера, 6:Штраф, 7:Арест, 8:Судимость
                     let rawCode = getVal(0).toUpperCase(); 
                     let num = getVal(1);                  
                     let title = getVal(2);                
