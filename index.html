@@ -333,7 +333,11 @@
                     if (index === 0 || !row.c) return; 
                     
                     const cells = row.c;
-                    const getVal = (idx) => (cells[idx] && cells[idx].v !== null) ? String(cells[idx].v).trim() : "";
+                    const getVal = (idx) => {
+                        if (!cells[idx]) return "";
+                        const val = cells[idx].f || cells[idx].v;
+                        return val !== null ? String(val).trim() : "";
+                    }
 
                     let rawCode = getVal(0).toUpperCase(); 
                     let num = String(getVal(1)).replace(/[^0-9.]/g, '');                  
