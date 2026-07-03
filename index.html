@@ -108,8 +108,8 @@
             /* Жесткая сетка: Заголовок (50px), Таблица (115px), Описание (всё остальное) */
             display: grid;
             height: var(--card-height);
-            grid-template-rows: 50px 115px 1fr; 
-            gap: 12px; 
+            grid-template-rows: max-content max-content 1fr;
+            gap: 12px;
         }
         
         .card:hover { 
@@ -190,10 +190,11 @@
         .info-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             font-size: 13px;
             border-bottom: 1px dashed #3a3a3c;
             padding-bottom: 4px;
+            gap: 10px;
         }
         
         .info-row:last-child {
@@ -204,16 +205,16 @@
         .info-label {
             color: #8e8e93;
             font-weight: 600;
+            flex-shrink: 0;
         }
 
         .info-val {
             color: #ffffff;
             font-weight: 800;
             text-align: right;
-            max-width: 65%; /* Не дает длинным значениям сломать верстку */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            max-width: 70%; /* Не дает длинным значениям сломать верстку */
+            white-space: normal;
+            word-break: break-word;
         }
 
         .info-val.empty {
