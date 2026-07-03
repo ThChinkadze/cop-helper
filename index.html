@@ -32,14 +32,17 @@
             align-items: center;
         }
 
+        /* Исправлено: Контейнер жестко держит фон и не просвечивает при скролле */
         .controls-container {
             width: 100%;
             max-width: 900px;
             position: sticky;
-            top: 10px;
+            top: 0;
             z-index: 100;
             background-color: var(--bg-color);
-            padding-bottom: 15px;
+            padding-top: 10px;
+            padding-bottom: 20px;
+            box-shadow: 0 10px 15px -5px var(--bg-color);
         }
 
         #searchInput {
@@ -79,7 +82,7 @@
 
         .tab-btn:hover { background-color: #4a4a4a; color: #fff; }
         .tab-btn[data-code="uk"].active { background-color: var(--uk-color); color: white; }
-        .tab-btn[data-code="ak"].active { background-color: var(--ak-color); color: white; }
+        .tab-btn[data-code="ak"].active { background-color: var(--warning || var(--ak-color)); color: white; }
         .tab-btn[data-code="dk"].active { background-color: var(--dk-color); color: white; }
         .tab-btn[data-code="proc"].active { background-color: var(--proc-color); color: white; }
 
@@ -156,8 +159,7 @@
         <input type="text" id="searchInput" placeholder="Поиск по статье, ситуации или ключевому слову...">
         <div class="tabs">
             <button class="tab-btn active" data-code="uk">Уголовный кодекс</button>
-            <button class="tab-btn" data-code="ak">Административный</button>
-            <button class="tab-btn" data-code="dk">Дорожный кодекс</button>
+            <button class="tab-btn" data-code="ak">Административный кодекс</button> <button class="tab-btn" data-code="dk">Дорожный кодекс</button>
             <button class="tab-btn" data-code="proc">Процессуальный кодекс</button>
         </div>
     </div>
@@ -169,12 +171,11 @@
     <div id="toast">Скопировано в буфер!</div>
 
     <script>
-        // ВСТАВЬ СЮДА ID СВОЕЙ ТАБЛИЦЫ ИЗ АДРЕСНОЙ СТРОКИ
+        // ВСТАВЬ СЮДА ID СВОЕЙ ТАБЛИЦЫ
         const SHEET_ID = '1ECGNHLbqR8KuPV_QH1E0SO8mGUOm4WIYP-hWWR5PZ-U'; 
-        // Имя листа в Google Sheets
         const SHEET_NAME = encodeURIComponent('Законадательная база'); 
         
-        const TIMEOUT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+        const TIMEOUT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_NAME}`;
 
         let parsedDatabase = [];
         let currentCode = "uk";
@@ -189,7 +190,6 @@
                 const response = await fetch(TIMEOUT_URL);
                 const text = await response.text();
                 
-                // Очищаем гугловский оберточный JSON-ответ
                 const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
                 const json = JSON.parse(jsonString);
                 const rows = json.table.rows;
@@ -197,25 +197,26 @@
                 parsedDatabase = [];
 
                 rows.forEach((row, index) => {
-                    if (index === 0) return; // Пропускаем заголовки
+                    if (index === 0) return;
                     
                     const cells = row.c;
-                    
-                    // Вспомогательная функция безопасного чтения ячеек
                     const getVal = (idx) => (cells[idx] && cells[idx].v !== null) ? String(cells[idx].v).trim() : "";
 
-                    // Читаем левую сторону (ДК, АК, ПК)
+                    // --- СБОРКА ЛЕВОЙ СТОРОНЫ (ДК, АК, ПК) ---
                     let leftNum = getVal(0);
                     let leftDesc = getVal(1);
                     let leftPunish = getVal(2);
 
                     if (leftNum && !leftNum.startsWith("Статья") && !leftNum.includes("КОДЕКС") && !leftNum.includes("ПОРЯДОК")) {
-                        let codeType = "dk";
+                        let codeType = "dk"; // По умолчанию ДК
                         
-                        // Определяем тип кодекса на левой стороне
-                        if (leftNum.includes(')') || leftNum.toLowerCase().includes('этап') || (parseInt(leftNum) > 0 && !leftDesc)) {
+                        // Улучшенный алгоритм сортировки левой стороны
+                        let isProc = leftNum.includes(')') || leftNum.toLowerCase().includes('этап') || leftNum.toLowerCase().includes('стадия') || (parseInt(leftNum) > 0 && !leftPunish);
+                        let isAk = leftNum.startsWith('5.') || leftNum.startsWith('7.') || leftNum.startsWith('8.') || leftNum.startsWith('9.') || leftNum.startsWith('11.') || leftNum.startsWith('Глава');
+
+                        if (isProc) {
                             codeType = "proc";
-                        } else if (leftNum.startsWith('5.') || leftNum.startsWith('7.') || leftNum.startsWith('8.') || leftNum.startsWith('9.') || leftNum.startsWith('11.')) {
+                        } else if (isAk) {
                             codeType = "ak";
                         }
 
@@ -231,24 +232,35 @@
                         }
                     }
 
-                    // Читаем правую сторону (Уголовный Кодекс)
+                    // --- СБОРКА ПРАВОЙ СТОРОНЫ (УК) ---
                     let ukNum = getVal(3);
                     let ukDesc = getVal(4);
                     let ukStars = getVal(5);
                     let ukFine = getVal(6);
                     let ukJail = getVal(7);
 
-                    if (ukNum && !ukNum.startsWith("Статья")) {
+                    if (ukNum && !ukNum.startsWith("Статья") && !ukNum.includes("УГОЛОВНЫЙ")) {
                         let badges = [];
                         if (ukFine && ukFine !== "—" && ukFine !== "-") badges.push(`💰 Штраф: ${ukFine}`);
                         if (ukJail) badges.push(`🕒 Срок: ${ukJail}`);
+
+                        // Корректно переводим числовые звезды в графические ★★★
+                        let starDisplay = "";
+                        if (ukStars) {
+                            if (ukStars.includes('★')) {
+                                starDisplay = ukStars;
+                            } else {
+                                let starCount = parseInt(ukStars.replace(/[^0-9]/g, '')) || 0;
+                                starDisplay = '★'.repeat(starCount);
+                            }
+                        }
 
                         parsedDatabase.push({
                             code: "uk",
                             num: ukNum,
                             title: ukDesc.split(/[.\n]/)[0] + '.',
                             desc: ukDesc,
-                            stars: ukStars.includes('★') ? ukStars : '★'.repeat(parseInt(ukStars) || 0),
+                            stars: starDisplay,
                             badges: badges
                         });
                     }
