@@ -336,7 +336,7 @@
                     const getVal = (idx) => (cells[idx] && cells[idx].v !== null) ? String(cells[idx].v).trim() : "";
 
                     let rawCode = getVal(0).toUpperCase(); 
-                    let num = getVal(1);                  
+                    let num = String(getVal(1)).replace(/[^0-9.]/g, '');                  
                     let title = getVal(2);                
                     let desc = getVal(3);                 
                     let stars = getVal(4);                
