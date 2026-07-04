@@ -10,7 +10,13 @@
 <body>
 
     <div class="controls-container">
-        <input type="text" id="searchInput" placeholder="Опишите ситуацию, введите фразу или номер...">
+        <div class="search-row">
+            <input type="text" id="searchInput" placeholder="Опишите ситуацию, введите фразу или номер...">
+            <button id="viewToggle" title="Переключить вид" aria-label="Переключить вид">
+                <span class="icon-cards">▦</span>
+                <span class="icon-list">≣</span>
+            </button>
+        </div>
         <div class="tabs">
             <button class="tab-btn active" data-code="uk">Уголовный кодекс</button>
             <button class="tab-btn" data-code="ak">Административный кодекс</button> 
