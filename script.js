@@ -43,9 +43,9 @@ async function loadData() {
                 extraMeasure: getVal(5),
                 fine: getVal(6),
                 arrest: getVal(7),
-                felony: getVal(8), // Проверь, чтобы индексы совпадали с таблицей
-                type: getVal(9),   // Тип статьи (F, R, F/R и т.д.)
-                tags: getVal(10)   // Скрытые теги для поиска
+                felony: getVal(8),
+                type: getVal(9),   
+                tags: getVal(10)   
             });
         });
         renderArticles();
@@ -91,55 +91,74 @@ function renderArticles() {
         return result;
     };
 
-    let count = 0;
+    let matchedArticles = [];
 
+    // Этап 1: Фильтрация и подсчет очков
     parsedDatabase.forEach(article => {
         if (!isSearching && article.code !== currentCode) return;
 
-        let isMatch = true;
+        let matchScore = 0;
 
         if (isSearching) {
-            // Добавили скрытые теги (article.tags) в строку для поиска
             const searchableText = `${article.num} ${article.title} ${article.desc} ${article.tags}`.toLowerCase();
-            isMatch = searchGroups.every(group => 
-                group.some(term => searchableText.includes(term))
-            );
-        }
-
-        if (isMatch) {
-            count++;
-            const card = document.createElement('div');
-            card.className = `card ${article.code}`;
             
-            const highlightedTitle = highlightText(article.title);
-            const highlightedNum = highlightText(article.num);
-            const highlightedDesc = highlightText(article.desc).replace(/\n/g, '<br>');
+            // Проверяем каждое слово (группу синонимов) из запроса
+            searchGroups.forEach(group => {
+                // Если хотя бы одно слово из группы нашлось в статье
+                if (group.some(term => searchableText.includes(term))) {
+                    matchScore++; // Начисляем балл
+                }
+            });
 
-            // Логика отображения типа статьи (только для УК и если тип указан)
-            let typeHtml = '';
-            if (article.code === 'uk' && article.type) {
-                typeHtml = `<div class="article-type">${article.type}</div>`;
-            }
-
-            card.innerHTML = `
-                <div class="card-header">
-                    <div class="title">${highlightedTitle}</div>
-                    <div class="card-header-right">
-                        ${typeHtml}
-                        <div class="article-num">ст. ${highlightedNum}</div>
-                    </div>
-                </div>
-                <div class="info-table">
-                    <div class="info-row"><div class="info-label">Штраф</div><div class="info-val">${article.fine || '—'}</div></div>
-                    <div class="info-row"><div class="info-label">Розыск</div><div class="info-val">${article.stars || '—'}</div></div>
-                    <div class="info-row"><div class="info-label">Арест</div><div class="info-val">${article.arrest || '—'}</div></div>
-                    <div class="info-row"><div class="info-label">Судимость</div><div class="info-val ${article.felony.toLowerCase().includes('судимость') ? 'danger' : ''}">${article.felony || '—'}</div></div>
-                    <div class="info-row"><div class="info-label">Доп. мера</div><div class="info-val">${article.extraMeasure || '—'}</div></div>
-                </div>
-                <div class="desc">${highlightedDesc}</div>
-            `;
-            container.appendChild(card);
+            // Если не нашлось ни одного слова из запроса — отбрасываем статью
+            if (matchScore === 0) return;
         }
+
+        matchedArticles.push({ article, matchScore });
+    });
+
+    // Этап 2: Сортировка (если активен поиск)
+    if (isSearching) {
+        // Сначала идут статьи с наибольшим количеством совпадений (высший балл)
+        matchedArticles.sort((a, b) => b.matchScore - a.matchScore);
+    }
+
+    // Этап 3: Отрисовка
+    let count = 0;
+    matchedArticles.forEach(item => {
+        const article = item.article;
+        count++;
+        
+        const card = document.createElement('div');
+        card.className = `card ${article.code}`;
+        
+        const highlightedTitle = highlightText(article.title);
+        const highlightedNum = highlightText(article.num);
+        const highlightedDesc = highlightText(article.desc).replace(/\n/g, '<br>');
+
+        let typeHtml = '';
+        if (article.code === 'uk' && article.type && article.type !== '-' && article.type !== '—') {
+            typeHtml = `<div class="article-type">${article.type}</div>`;
+        }
+
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="title">${highlightedTitle}</div>
+                <div class="card-header-right">
+                    ${typeHtml}
+                    <div class="article-num">ст. ${highlightedNum}</div>
+                </div>
+            </div>
+            <div class="info-table">
+                <div class="info-row"><div class="info-label">Штраф</div><div class="info-val">${article.fine || '—'}</div></div>
+                <div class="info-row"><div class="info-label">Розыск</div><div class="info-val">${article.stars || '—'}</div></div>
+                <div class="info-row"><div class="info-label">Арест</div><div class="info-val">${article.arrest || '—'}</div></div>
+                <div class="info-row"><div class="info-label">Судимость</div><div class="info-val ${article.felony.toLowerCase().includes('судимость') ? 'danger' : ''}">${article.felony || '—'}</div></div>
+                <div class="info-row"><div class="info-label">Доп. мера</div><div class="info-val">${article.extraMeasure || '—'}</div></div>
+            </div>
+            <div class="desc">${highlightedDesc}</div>
+        `;
+        container.appendChild(card);
     });
 
     if (count === 0) {
