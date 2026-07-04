@@ -43,7 +43,9 @@ async function loadData() {
                 extraMeasure: getVal(5),
                 fine: getVal(6),
                 arrest: getVal(7),
-                felony: getVal(8)
+                felony: getVal(8), // Проверь, чтобы индексы совпадали с таблицей
+                type: getVal(9),   // Тип статьи (F, R, F/R и т.д.)
+                tags: getVal(10)   // Скрытые теги для поиска
             });
         });
         renderArticles();
@@ -97,7 +99,8 @@ function renderArticles() {
         let isMatch = true;
 
         if (isSearching) {
-            const searchableText = `${article.num} ${article.title} ${article.desc}`.toLowerCase();
+            // Добавили скрытые теги (article.tags) в строку для поиска
+            const searchableText = `${article.num} ${article.title} ${article.desc} ${article.tags}`.toLowerCase();
             isMatch = searchGroups.every(group => 
                 group.some(term => searchableText.includes(term))
             );
@@ -112,10 +115,19 @@ function renderArticles() {
             const highlightedNum = highlightText(article.num);
             const highlightedDesc = highlightText(article.desc).replace(/\n/g, '<br>');
 
+            // Логика отображения типа статьи (только для УК и если тип указан)
+            let typeHtml = '';
+            if (article.code === 'uk' && article.type) {
+                typeHtml = `<div class="article-type">${article.type}</div>`;
+            }
+
             card.innerHTML = `
                 <div class="card-header">
                     <div class="title">${highlightedTitle}</div>
-                    <div class="article-num">ст. ${highlightedNum}</div>
+                    <div class="card-header-right">
+                        ${typeHtml}
+                        <div class="article-num">ст. ${highlightedNum}</div>
+                    </div>
                 </div>
                 <div class="info-table">
                     <div class="info-row"><div class="info-label">Штраф</div><div class="info-val">${article.fine || '—'}</div></div>
