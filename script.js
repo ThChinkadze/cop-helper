@@ -58,42 +58,13 @@ function renderArticles() {
     const filterText = document.getElementById('searchInput').value.toLowerCase().trim();
     const isSearching = filterText.length > 0;
 
-    let searchGroups = [];
-    let highlightTerms = []; 
-
+    let searchWords = [];
     if (isSearching) {
-        const queryWords = filterText.split(/\s+/);
-        
-        queryWords.forEach(word => {
-            let currentGroup = [word];
-            synonymsDictionary.forEach(group => {
-                if (group.some(syn => syn.includes(word) || word.includes(syn))) {
-                    currentGroup = currentGroup.concat(group);
-                }
-            });
-            searchGroups.push([...new Set(currentGroup)]);
-            highlightTerms = highlightTerms.concat(currentGroup);
-        });
+        searchWords = filterText.split(/\s+/).filter(w => w.length > 1);
     }
-
-    const highlightText = (text) => {
-        if (!isSearching || !text) return text;
-        let result = text;
-        
-        const uniqueTerms = [...new Set(highlightTerms)]
-            .filter(t => t.length > 2 && t !== 'span' && t !== 'class') 
-            .sort((a, b) => b.length - a.length);
-
-        uniqueTerms.forEach(term => {
-            const regex = new RegExp(`(${term})`, 'gi');
-            result = result.replace(regex, '<span class="highlight">$1</span>');
-        });
-        return result;
-    };
 
     let matchedArticles = [];
 
-    // Этап 1: Фильтрация и подсчет очков
     parsedDatabase.forEach(article => {
         if (!isSearching && article.code !== currentCode) return;
 
@@ -102,28 +73,24 @@ function renderArticles() {
         if (isSearching) {
             const searchableText = `${article.num} ${article.title} ${article.desc} ${article.tags}`.toLowerCase();
             
-            // Проверяем каждое слово (группу синонимов) из запроса
-            searchGroups.forEach(group => {
-                // Если хотя бы одно слово из группы нашлось в статье
-                if (group.some(term => searchableText.includes(term))) {
-                    matchScore++; // Начисляем балл
+            // Теперь считаем сколько слов из запроса нашлось в тексте
+            searchWords.forEach(word => {
+                if (searchableText.includes(word)) {
+                    matchScore += 1;
                 }
             });
 
-            // Если не нашлось ни одного слова из запроса — отбрасываем статью
+            // Если не нашлось ни одного слова — игнорируем
             if (matchScore === 0) return;
         }
 
         matchedArticles.push({ article, matchScore });
     });
 
-    // Этап 2: Сортировка (если активен поиск)
-    if (isSearching) {
-        // Сначала идут статьи с наибольшим количеством совпадений (высший балл)
-        matchedArticles.sort((a, b) => b.matchScore - a.matchScore);
-    }
+    // Сортируем: те, где нашлось больше слов — выше
+    matchedArticles.sort((a, b) => b.matchScore - a.matchScore);
 
-    // Этап 3: Отрисовка
+    // Отрисовка
     let count = 0;
     matchedArticles.forEach(item => {
         const article = item.article;
@@ -132,22 +99,27 @@ function renderArticles() {
         const card = document.createElement('div');
         card.className = `card ${article.code}`;
         
+        // Подсветка слов
+        const highlightText = (text) => {
+            if (!isSearching) return text;
+            let result = text;
+            searchWords.forEach(word => {
+                const regex = new RegExp(`(${word})`, 'gi');
+                result = result.replace(regex, '<span class="highlight">$1</span>');
+            });
+            return result;
+        };
+
         const highlightedTitle = highlightText(article.title);
         const highlightedNum = highlightText(article.num);
         const highlightedDesc = highlightText(article.desc).replace(/\n/g, '<br>');
 
-        let typeHtml = '';
-        if (article.code === 'uk' && article.type && article.type !== '-' && article.type !== '—') {
-            typeHtml = `<div class="article-type">${article.type}</div>`;
-        }
+        let typeHtml = (article.code === 'uk' && article.type && article.type !== '-') ? `<div class="article-type">${article.type}</div>` : '';
 
         card.innerHTML = `
             <div class="card-header">
                 <div class="title">${highlightedTitle}</div>
-                <div class="card-header-right">
-                    ${typeHtml}
-                    <div class="article-num">ст. ${highlightedNum}</div>
-                </div>
+                <div class="card-header-right">${typeHtml}<div class="article-num">ст. ${highlightedNum}</div></div>
             </div>
             <div class="info-table">
                 <div class="info-row"><div class="info-label">Штраф</div><div class="info-val">${article.fine || '—'}</div></div>
