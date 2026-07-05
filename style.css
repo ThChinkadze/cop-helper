@@ -22,6 +22,12 @@ body {
     align-items: center; 
 }
 
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+}
+
 .controls-container { 
     width: 100%; max-width: 900px; 
     position: sticky; top: 0; z-index: 100; 
@@ -82,9 +88,54 @@ body {
     color: white; 
 }
 
+.controls-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+}
+
+.controls-row .tabs {
+    flex: 1;
+    padding-bottom: 0;
+}
+
+.view-toggle {
+    display: flex;
+    flex-shrink: 0;
+    gap: 4px;
+    background-color: #2c2c2e;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    padding: 0;
+    background-color: transparent;
+    color: #8e8e93;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-btn:hover {
+    background-color: #3a3a3c;
+    color: #fff;
+}
+
+.view-btn.active {
+    background-color: var(--accent);
+    color: white;
+}
+
 #articlesContainer { 
     display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); 
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); 
     gap: 20px; 
     width: 100%; max-width: 1300px; 
     margin-top: 10px; 
@@ -216,4 +267,223 @@ body {
     padding: 3px 6px;
     border-radius: 4px;
     white-space: nowrap;
+    cursor: help;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.stale-banner {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: -5px;
+    margin-bottom: 15px;
+    padding: 12px 16px;
+    background-color: rgba(255, 149, 0, 0.12);
+    border: 1px solid var(--ak-color);
+    border-radius: 8px;
+    color: #ffd8a8;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.stale-banner button {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    background-color: var(--ak-color);
+    color: #1e1e1e;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.stale-banner button:hover {
+    filter: brightness(1.1);
+}
+
+/* ===== Компактный вид (список строк) ===== */
+
+#articlesContainer.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.row {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    border: 1px solid #2c2c2e;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    overflow: hidden;
+}
+
+.row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 16px;
+    cursor: pointer;
+}
+
+.row-header:hover,
+.row.expanded .row-header {
+    background-color: #242426;
+}
+
+.row:hover {
+    border-color: #3a3a3c;
+}
+
+.row.uk { border-left: 6px solid var(--uk-color); }
+.row.ak { border-left: 6px solid var(--ak-color); }
+.row.dk { border-left: 6px solid var(--dk-color); }
+
+.row-chevron {
+    color: #636366;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.row.expanded .row-chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+}
+
+.row-desc-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+}
+
+.row-desc-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+
+.row-desc {
+    padding: 10px 16px 14px 16px;
+    border-top: 1px solid #252525;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-main);
+}
+
+.row.expanded .row-desc-wrapper {
+    grid-template-rows: 1fr;
+}
+
+.row-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.row-num {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e2e2e6;
+    background-color: #2c2c2e;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #3a3a3c;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.row-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-title);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.row-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.row-tag {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    background-color: #262628;
+    border: 1px solid #3a3a3c;
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-sizing: border-box;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+    flex-grow: 0;
+}
+
+.row-tag.row-fine {
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.row-tag.row-danger {
+    color: var(--uk-color);
+    border-color: var(--uk-color);
+}
+
+/* Фиксированные ширины колонок — гарантируют, что параметры всегда стоят
+   в одной и той же горизонтальной позиции, независимо от длины значения. */
+.row-slot-type   { width: 54px; flex-shrink: 0; }
+.row-slot-num    { width: 112px; }
+.row-slot-stars  { width: 88px; }
+.row-slot-fine   { width: 168px; }
+.row-slot-arrest { width: 140px; }
+.row-slot-extra  { width: 168px; }
+
+/* Скрывает содержимое слота (доп. мера отсутствует), но сохраняет его ширину,
+   чтобы соседние колонки (штраф) не сдвигались */
+.row-hidden {
+    visibility: hidden;
+}
+
+@media (max-width: 480px) {
+    .row-header {
+        flex-wrap: wrap;
+    }
+
+    .row-left {
+        width: 100%;
+    }
+
+    .row-title {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+    }
+
+    .row-right {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
 }
