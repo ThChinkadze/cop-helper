@@ -8,10 +8,14 @@
     --uk-color: #ff3b30;
     --ak-color: #ff9500;
     --dk-color: #007aff;
+    --pk-color: #af52de;
     --success: #34c759;
     --card-height: 350px; 
     --scrollbar-thumb: #3a3a3c;
     --scrollbar-thumb-hover: #4a4a4c;
+    --control-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    --control-bg: #2c2c2e;
+    --control-border: #3a3a3c;
 }
 
 /* Тонкий скроллбар в цвет темы — применяется ко всей странице
@@ -60,10 +64,46 @@ body {
     body {
         padding: 10px;
     }
+
+    /* Горизонтальный скролл вкладок нужен только на узких экранах —
+       на десктопе ширины шапки достаточно и без него (см. .tabs).
+       overflow-x:auto здесь неизбежно обрезает вертикальную часть теней
+       кнопок вкладок (спецификация CSS переводит overflow-y тоже в auto),
+       но на мобильном это меньшее зло по сравнению с нечитаемым рядом вкладок. */
+    .tabs {
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Компактный вид (список строк) на узких экранах — переносим строку
+       вместо горизонтального сжатия колонок */
+    .row-header {
+        flex-wrap: wrap;
+    }
+
+    .row-left {
+        width: 100%;
+    }
+
+    .row-title {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+    }
+
+    .row-right {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
 }
 
 .controls-container { 
-    width: 100%; max-width: 900px; 
+    width: 100%; max-width: 1100px; 
     position: sticky; top: 0; z-index: 100; 
     padding-top: 10px; padding-bottom: 20px; 
 }
@@ -73,12 +113,12 @@ body {
     padding: 16px 20px; 
     font-size: 18px; 
     font-family: 'Nunito', sans-serif; 
-    background-color: #2c2c2e; 
-    color: white; 
+    background-color: var(--control-bg); 
+    color: var(--text-title); 
     border: 2px solid transparent; 
     border-radius: 10px; 
     outline: none; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4); 
+    box-shadow: var(--control-shadow); 
     transition: border-color 0.2s; 
     box-sizing: border-box; 
     margin-bottom: 15px; 
@@ -93,7 +133,6 @@ body {
     display: flex; 
     gap: 10px; 
     width: 100%; 
-    overflow-x: auto; 
     padding-bottom: 5px; 
 }
 
@@ -103,23 +142,32 @@ body {
     font-family: 'Nunito', sans-serif; 
     font-size: 15px; 
     font-weight: 800; 
-    background-color: #2c2c2e; 
+    background-color: var(--control-bg); 
     color: #8e8e93; 
     border: none; 
     border-radius: 8px; 
     cursor: pointer; 
     transition: all 0.2s ease; 
     white-space: nowrap; 
+    box-shadow: var(--control-shadow); 
 }
 
 .tab-btn:hover { 
-    background-color: #3a3a3c; 
+    background-color: var(--control-border); 
     color: #fff; 
 }
 
 .tab-btn.active { 
     background-color: var(--accent); 
-    color: white; 
+    color: var(--text-title); 
+}
+
+/* Модификатор для кнопки повтора загрузки в .loader — раньше эти три свойства
+   были заданы инлайн-стилем прямо в script.js, единственное такое место в проекте */
+.retry-btn {
+    margin-top: 12px;
+    flex: none;
+    padding: 10px 20px;
 }
 
 .controls-row {
@@ -138,9 +186,10 @@ body {
     display: flex;
     flex-shrink: 0;
     gap: 4px;
-    background-color: #2c2c2e;
+    background-color: var(--control-bg);
     border-radius: 8px;
     padding: 4px;
+    box-shadow: var(--control-shadow);
 }
 
 .view-btn {
@@ -158,13 +207,13 @@ body {
 }
 
 .view-btn:hover {
-    background-color: #3a3a3c;
+    background-color: var(--control-border);
     color: #fff;
 }
 
 .view-btn.active {
     background-color: var(--accent);
-    color: white;
+    color: var(--text-title);
 }
 
 .settings-wrapper {
@@ -179,22 +228,23 @@ body {
     width: 40px;
     height: 100%;
     padding: 0;
-    background-color: #2c2c2e;
+    background-color: var(--control-bg);
     color: #8e8e93;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
+    box-shadow: var(--control-shadow);
 }
 
 .settings-btn:hover {
-    background-color: #3a3a3c;
+    background-color: var(--control-border);
     color: #fff;
 }
 
 .settings-btn[aria-expanded="true"] {
     background-color: var(--accent);
-    color: white;
+    color: var(--text-title);
 }
 
 .settings-panel {
@@ -205,7 +255,7 @@ body {
     max-width: calc(100vw - 40px);
     box-sizing: border-box;
     background-color: var(--card-bg);
-    border: 1px solid #2c2c2e;
+    border: 1px solid var(--control-bg);
     border-radius: 10px;
     padding: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -244,9 +294,9 @@ body {
     width: 32px;
     height: 32px;
     flex-shrink: 0;
-    background-color: #2c2c2e;
-    color: #ffffff;
-    border: 1px solid #3a3a3c;
+    background-color: var(--control-bg);
+    color: var(--text-title);
+    border: 1px solid var(--control-border);
     border-radius: 8px;
     font-size: 18px;
     font-weight: 800;
@@ -268,7 +318,7 @@ body {
 .zoom-value {
     font-size: 14px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--text-title);
     min-width: 48px;
     text-align: center;
     flex-shrink: 0;
@@ -286,7 +336,7 @@ body {
     background-color: var(--card-bg); 
     border-radius: 12px; 
     padding: 16px; 
-    border: 1px solid #2c2c2e; 
+    border: 1px solid var(--control-bg); 
     display: grid; 
     height: var(--card-height); 
     grid-template-rows: max-content max-content 1fr; 
@@ -296,6 +346,93 @@ body {
 .card.uk { border-left: 6px solid var(--uk-color); }
 .card.ak { border-left: 6px solid var(--ak-color); }
 .card.dk { border-left: 6px solid var(--dk-color); }
+
+.card.pk {
+    border-left: 6px solid var(--pk-color);
+    grid-template-rows: max-content 1fr;
+}
+
+.card.pk .card-header {
+    min-height: 0;
+}
+
+.card.pk .title {
+    font-size: 16px;
+    -webkit-line-clamp: 3;
+}
+
+.pk-body {
+    overflow-y: auto;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #c4c4c9;
+    border-top: 1px solid #252525;
+    padding-top: 12px;
+}
+
+.pk-body p {
+    margin: 0;
+}
+
+.pk-steps {
+    list-style: none;
+    counter-reset: pk-step;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pk-steps li {
+    counter-increment: pk-step;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.pk-steps li::before {
+    content: counter(pk-step);
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background-color: rgba(175, 82, 222, 0.16);
+    color: var(--pk-color);
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Маркированный список (тип "list") — та же плотность/ритм, что и у "steps",
+   но маркер — простая точка, без нумерации (порядок пунктов не важен) */
+.pk-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pk-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.pk-list li::before {
+    content: '';
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    margin-top: 8px;
+    border-radius: 50%;
+    background-color: var(--pk-color);
+}
 
 .card-header { 
     display: flex; 
@@ -320,14 +457,17 @@ body {
 
 }
 
-.article-num { 
+/* Общий базовый бейдж для номера статьи — переиспользуется в карточках (сам по
+   себе) и в списке (.row-num добавляет только особенности слота фиксированной
+   ширины поверх этой базы) */
+.badge-num { 
     font-size: 13px; 
     font-weight: 700; 
     color: #e2e2e6; 
-    background-color: #2c2c2e; 
+    background-color: var(--control-bg); 
     padding: 4px 10px; 
     border-radius: 6px; 
-    border: 1px solid #3a3a3c; 
+    border: 1px solid var(--control-border); 
     white-space: nowrap; 
 }
 
@@ -335,7 +475,7 @@ body {
     background-color: #262628; 
     border-radius: 8px; 
     padding: 10px 12px; 
-    border: 1px solid #3a3a3c; 
+    border: 1px solid var(--control-border); 
     display: flex; 
     flex-direction: column; 
     gap: 6px; 
@@ -347,7 +487,7 @@ body {
     align-items: flex-start; 
     gap: 10px; 
     font-size: 13px; 
-    border-bottom: 1px dashed #3a3a3c; 
+    border-bottom: 1px dashed var(--control-border); 
     padding-bottom: 4px; 
 }
 
@@ -358,7 +498,7 @@ body {
 }
 
 .info-val { 
-    color: #ffffff; 
+    color: var(--text-title); 
     font-weight: 800; 
     text-align: right; 
     max-width: 70%; 
@@ -386,7 +526,7 @@ body {
 
 .highlight {
     background-color: rgba(255, 215, 0, 0.25);
-    color: #ffd700;
+    color: var(--stars);
     border-radius: 3px;
     padding: 0 2px;
     font-weight: bold;
@@ -404,7 +544,7 @@ body {
     font-weight: 800; 
     color: #636366; 
     background-color: transparent;
-    border: 1px solid #3a3a3c;
+    border: 1px solid var(--control-border);
     padding: 3px 6px;
     border-radius: 4px;
     white-space: nowrap;
@@ -460,7 +600,7 @@ body {
 .row {
     background-color: var(--card-bg);
     border-radius: 10px;
-    border: 1px solid #2c2c2e;
+    border: 1px solid var(--control-bg);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -483,7 +623,7 @@ body {
 }
 
 .row:hover {
-    border-color: #3a3a3c;
+    border-color: var(--control-border);
 }
 
 .row.uk { border-left: 6px solid var(--uk-color); }
@@ -533,14 +673,6 @@ body {
 }
 
 .row-num {
-    font-size: 13px;
-    font-weight: 700;
-    color: #e2e2e6;
-    background-color: #2c2c2e;
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1px solid #3a3a3c;
-    white-space: nowrap;
     flex-shrink: 0;
     box-sizing: border-box;
     text-align: center;
@@ -568,9 +700,9 @@ body {
 .row-tag {
     font-size: 13px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text-title);
     background-color: #262628;
-    border: 1px solid #3a3a3c;
+    border: 1px solid var(--control-border);
     padding: 4px 10px;
     border-radius: 6px;
     white-space: nowrap;
@@ -605,26 +737,4 @@ body {
    чтобы соседние колонки (штраф) не сдвигались */
 .row-hidden {
     visibility: hidden;
-}
-
-@media (max-width: 480px) {
-    .row-header {
-        flex-wrap: wrap;
-    }
-
-    .row-left {
-        width: 100%;
-    }
-
-    .row-title {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: unset;
-    }
-
-    .row-right {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-    }
 }
