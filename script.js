@@ -2,7 +2,11 @@ const SHEET_ID = '1ECGNHLbqR8KuPV_QH1E0SO8mGUOm4WIYP-hWWR5PZ-U';
 const SHEET_NAME = encodeURIComponent('База данных'); 
 const TIMEOUT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_NAME}&headers=0`;
 
+const SHEET_NAME_PK = encodeURIComponent('Процессуальный кодекс');
+const PK_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_NAME_PK}&headers=0`;
+
 let parsedDatabase = [];
+let proceduralData = [];
 let currentCode = "uk";
 let searchDebounceTimer;
 
@@ -67,22 +71,43 @@ function showStaleBanner(savedAt) {
     document.getElementById('retryStaleBtn').addEventListener('click', loadData);
 }
 
+// Общий запрос+разбор gviz-ответа Google Sheets — используется обоими загрузчиками
+// (статьи кодексов и Процессуальный кодекс). Обработка ошибок и раскладка строк по
+// полям намеренно остаются в каждом загрузчике отдельно (у loadData есть офлайн-кэш
+// и баннер, у loadProceduralData — нет), сюда вынесена только общая часть
+// "получить ответ и распарсить его в массив строк".
+async function fetchGvizRows(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Сервер ответил с ошибкой: ${response.status}`);
+    }
+    const text = await response.text();
+    const json = JSON.parse(text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1));
+    return json.table.rows;
+}
+
+// Достаёт значение ячейки gviz-таблицы по индексу: приоритет — форматированное
+// значение (f), затем сырое (v), иначе пустая строка. Общая для обоих листов
+// (статьи и ПК). Написано явными шагами вместо свёрнутого тернарника — так проще
+// увидеть порядок приоритета f -> v -> "" и не перепутать его при будущих правках.
+function getCellVal(cells, idx) {
+    const cell = cells[idx];
+    if (!cell) return "";
+    if (cell.f) return String(cell.f).trim();
+    if (cell.v !== null) return String(cell.v).trim();
+    return "";
+}
+
 async function loadData() {
     const container = document.getElementById('articlesContainer');
     try {
-        const response = await fetch(TIMEOUT_URL);
-        if (!response.ok) {
-            throw new Error(`Сервер ответил с ошибкой: ${response.status}`);
-        }
-        const text = await response.text();
-        const json = JSON.parse(text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1));
-        const rows = json.table.rows;
+        const rows = await fetchGvizRows(TIMEOUT_URL);
 
         parsedDatabase = [];
         rows.forEach((row) => {
             if (!row.c) return;
             const cells = row.c;
-            const getVal = (idx) => (cells[idx] && (cells[idx].f || cells[idx].v !== null)) ? String(cells[idx].f || cells[idx].v).trim() : "";
+            const getVal = (idx) => getCellVal(cells, idx);
 
             let rawCode = getVal(0).toUpperCase();
             if (rawCode === "КОДЕКС" || !{'UK':'uk','AK':'ak','DK':'dk'}[rawCode]) return;
@@ -115,7 +140,7 @@ async function loadData() {
             container.innerHTML = `
                 <div class="loader">
                     Не удалось загрузить базу данных. Проверьте интернет-соединение и попробуйте снова.<br>
-                    <button id="retryLoadBtn" class="tab-btn" style="margin-top: 12px; flex: none; padding: 10px 20px;">Повторить попытку</button>
+                    <button id="retryLoadBtn" class="tab-btn retry-btn">Повторить попытку</button>
                 </div>
             `;
             const retryBtn = document.getElementById('retryLoadBtn');
@@ -126,6 +151,35 @@ async function loadData() {
                 });
             }
         }
+    }
+}
+
+// Загрузка данных Процессуального кодекса — отдельный лист, отдельная (упрощённая)
+// структура полей. Сознательно не смешивается с parsedDatabase/loadData, так как
+// у этого раздела совсем другой набор полей (нет штрафа/ареста/звёзд и т.д.).
+// Обработка ошибок/офлайн-кэш для этого раздела — вне рамок текущего этапа,
+// добавим при необходимости позже.
+async function loadProceduralData() {
+    try {
+        const rows = await fetchGvizRows(PK_URL);
+
+        proceduralData = [];
+        rows.forEach((row) => {
+            if (!row.c) return;
+            const cells = row.c;
+            const getVal = (idx) => getCellVal(cells, idx);
+
+            const title = getVal(0);
+            if (!title || title === "Заголовок") return; // пропускаем пустые строки и строку-заголовок таблицы
+
+            proceduralData.push({
+                title: title,
+                type: getVal(1).toLowerCase(),
+                content: getVal(2)
+            });
+        });
+    } catch (e) {
+        console.error('Не удалось загрузить данные Процессуального кодекса:', e);
     }
 }
 
@@ -163,8 +217,20 @@ function buildTypeBadge(article, extraClass = '') {
 
 function renderArticles() {
     const container = document.getElementById('articlesContainer');
+
     const filterText = document.getElementById('searchInput').value.toLowerCase().trim();
     const isSearching = filterText.length > 0;
+
+    // Процессуальный кодекс — отдельный тип контента, без плиток/списка и своей
+    // логикой рендера. Но пока идёт поиск (в том числе начатый на этой вкладке),
+    // показываем не карточки ПК, а обычные результаты по УК/АК/ДК — так же, как
+    // при поиске с любой другой вкладки. proceduralData в эту выдачу не попадает,
+    // так как поиск ниже работает только по parsedDatabase.
+    if (currentCode === 'pk' && !isSearching) {
+        container.className = '';
+        renderProceduralCards(container);
+        return;
+    }
 
     let searchWords = [];
     if (isSearching) {
@@ -213,6 +279,25 @@ function renderArticles() {
     }
 }
 
+// Определяет, есть ли у статьи признак судимости по тексту поля "felony".
+// Общая логика для карточек и списка — раньше проверка была продублирована:
+// один раз инлайн прямо в шаблонной строке карточки, второй раз отдельной
+// переменной в списке — с риском разойтись при будущей правке критерия.
+function hasFelonyRecord(article) {
+    return article.felony.toLowerCase().includes('судимость');
+}
+
+// Готовит подсвеченные (уже экранированные) поля статьи — заголовок, номер,
+// описание. Общая логика для карточек и списка: раньше этот блок был дословно
+// продублирован в начале renderAsCards и renderAsList.
+function buildHighlightedFields(article, isSearching, searchWords) {
+    return {
+        title: highlightMatches(escapeHtml(article.title), isSearching, searchWords),
+        num: highlightMatches(escapeHtml(article.num), isSearching, searchWords),
+        desc: highlightMatches(escapeHtml(article.desc), isSearching, searchWords).replace(/\n/g, '<br>'),
+    };
+}
+
 // Отрисовка в виде плиток (карточек). Логика фильтрации/поиска/сортировки уже
 // выполнена в renderArticles() — эта функция отвечает только за разметку.
 function renderAsCards(container, matchedArticles, isSearching, searchWords) {
@@ -222,9 +307,8 @@ function renderAsCards(container, matchedArticles, isSearching, searchWords) {
         const card = document.createElement('div');
         card.className = `card ${article.code}`;
 
-        const highlightedTitle = highlightMatches(escapeHtml(article.title), isSearching, searchWords);
-        const highlightedNum = highlightMatches(escapeHtml(article.num), isSearching, searchWords);
-        const highlightedDesc = highlightMatches(escapeHtml(article.desc), isSearching, searchWords).replace(/\n/g, '<br>');
+        const { title: highlightedTitle, num: highlightedNum, desc: highlightedDesc } =
+            buildHighlightedFields(article, isSearching, searchWords);
 
         const typeHtml = buildTypeBadge(article);
 
@@ -237,13 +321,13 @@ function renderAsCards(container, matchedArticles, isSearching, searchWords) {
         card.innerHTML = `
             <div class="card-header">
                 <div class="title">${highlightedTitle}</div>
-                <div class="card-header-right">${typeHtml}<div class="article-num">ст. ${highlightedNum}</div></div>
+                <div class="card-header-right">${typeHtml}<div class="badge-num">ст. ${highlightedNum}</div></div>
             </div>
             <div class="info-table">
                 <div class="info-row"><div class="info-label">Штраф</div><div class="info-val">${safeFine || '—'}</div></div>
                 <div class="info-row"><div class="info-label">Розыск</div><div class="info-val">${safeStars || '—'}</div></div>
                 <div class="info-row"><div class="info-label">Арест</div><div class="info-val">${safeArrest || '—'}</div></div>
-                <div class="info-row"><div class="info-label">Судимость</div><div class="info-val ${article.felony.toLowerCase().includes('судимость') ? 'danger' : ''}">${safeFelony || '—'}</div></div>
+                <div class="info-row"><div class="info-label">Судимость</div><div class="info-val ${hasFelonyRecord(article) ? 'danger' : ''}">${safeFelony || '—'}</div></div>
                 <div class="info-row"><div class="info-label">Доп. мера</div><div class="info-val">${safeExtraMeasure || '—'}</div></div>
             </div>
             <div class="desc">${highlightedDesc}</div>
@@ -262,9 +346,8 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
         const row = document.createElement('div');
         row.className = `row ${article.code}`;
 
-        const highlightedTitle = highlightMatches(escapeHtml(article.title), isSearching, searchWords);
-        const highlightedNum = highlightMatches(escapeHtml(article.num), isSearching, searchWords);
-        const highlightedDesc = highlightMatches(escapeHtml(article.desc), isSearching, searchWords).replace(/\n/g, '<br>');
+        const { title: highlightedTitle, num: highlightedNum, desc: highlightedDesc } =
+            buildHighlightedFields(article, isSearching, searchWords);
 
         const typeHtml = buildTypeBadge(article, 'row-slot-type');
 
@@ -273,7 +356,7 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
         // всегда начинается в одной и той же позиции, независимо от длины тега типа/номера.
         const leftHtml = `
             ${typeHtml}
-            <div class="row-num row-slot-num">ст. ${highlightedNum}</div>
+            <div class="badge-num row-num row-slot-num">ст. ${highlightedNum}</div>
             <div class="row-title">${highlightedTitle}</div>
         `;
 
@@ -285,7 +368,7 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
             const safeStars = escapeHtml(article.stars);
             const safeFine = escapeHtml(article.fine);
             const safeArrest = escapeHtml(article.arrest);
-            const hasFelony = article.felony.toLowerCase().includes('судимость');
+            const hasFelony = hasFelonyRecord(article);
             const arrestTitle = hasFelony ? `${escapeHtml(article.arrest)}, судимость` : 'Арест';
 
             rightHtml = `
@@ -334,6 +417,61 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
         });
 
         container.appendChild(row);
+    });
+}
+
+// ===== Процессуальный кодекс: диспетчер шаблонов =====
+// Каждая карточка сама решает, каким шаблоном рендериться (поле "Тип" из таблицы).
+// "text" и "table" пока не реализованы — не встречались в реальном контенте, добавим по необходимости.
+const PK_TEMPLATES = {
+    steps: renderPkSteps,
+    list: renderPkList,
+};
+
+function renderPkSteps(content) {
+    const steps = content.split('\n').map(s => s.trim()).filter(Boolean);
+    const items = steps.map(step => `<li>${escapeHtml(step)}</li>`).join('');
+    return `<ol class="pk-steps">${items}</ol>`;
+}
+
+// Маркированный список — порядок пунктов не важен (в отличие от "steps")
+function renderPkList(content) {
+    const points = content.split('\n').map(s => s.trim()).filter(Boolean);
+    const items = points.map(point => `<li>${escapeHtml(point)}</li>`).join('');
+    return `<ul class="pk-list">${items}</ul>`;
+}
+
+// Safe-fallback: используется и для типов, для которых ещё не написан шаблон
+// (сейчас это "text"), и для опечаток/неизвестных значений в колонке "Тип" —
+// карточка не "теряется" молча, а просто показывается обычным текстом.
+function renderPkFallback(content) {
+    return `<p>${escapeHtml(content).replace(/\n/g, '<br>')}</p>`;
+}
+
+function renderProceduralCardBody(item) {
+    const renderer = PK_TEMPLATES[item.type];
+    return renderer ? renderer(item.content) : renderPkFallback(item.content);
+}
+
+function renderProceduralCards(container) {
+    container.innerHTML = '';
+
+    if (proceduralData.length === 0) {
+        container.innerHTML = `<div class="loader">Раздел пока пуст.</div>`;
+        return;
+    }
+
+    proceduralData.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card pk';
+
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="title">${escapeHtml(item.title)}</div>
+            </div>
+            <div class="pk-body">${renderProceduralCardBody(item)}</div>
+        `;
+        container.appendChild(card);
     });
 }
 
@@ -443,3 +581,4 @@ document.getElementById('searchInput').addEventListener('input', () => {
     searchDebounceTimer = setTimeout(renderArticles, 150);
 });
 loadData();
+loadProceduralData();
