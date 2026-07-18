@@ -2,7 +2,7 @@ const SHEET_ID = '1ECGNHLbqR8KuPV_QH1E0SO8mGUOm4WIYP-hWWR5PZ-U';
 const SHEET_NAME = encodeURIComponent('База данных'); 
 const TIMEOUT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_NAME}&headers=0`;
 
-const SHEET_NAME_PK = encodeURIComponent('Процессуальный кодекс');
+const SHEET_NAME_PK = encodeURIComponent('Общая информация');
 const PK_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_NAME_PK}&headers=0`;
 
 let parsedDatabase = [];
@@ -27,12 +27,25 @@ let currentZoom = (Number.isInteger(storedZoom) && storedZoom >= ZOOM_MIN && sto
     ? storedZoom
     : 100;
 
+// Настройка "Уведомления тумблеров" в панели настроек — включает/выключает
+// показ toast-уведомлений при переключении режима отображения и вида
+// (compact/full, плитки/список). Не влияет на уведомление "Скопировано".
+const NOTIFICATIONS_KEY = 'majestic_portland_toggle_notifications';
+let toggleNotificationsEnabled = localStorage.getItem(NOTIFICATIONS_KEY) !== 'false';
+
+const CODE_LABELS = {
+    'uk': 'УК',
+    'ak': 'АК',
+    'dk': 'ДК'
+};
+
 const TYPE_LABELS = {
-    'F': 'Федеральная',
-    'R': 'Региональная',
-    'F/R': 'Федеральная/Региональная',
-    'FIN': 'Финансовая',
-    'R/FIN': 'Региональная/Финансовая'
+    'Ф': 'Федеральная',
+    'Р': 'Региональная',
+    'Ф/Р': 'Федеральная/Региональная',
+    'ФИН': 'Финансовая',
+    'Р/ФИН': 'Региональная/Финансовая',
+    'В': 'Военная'
 };
 
 const CACHE_KEY = 'majestic_portland_pravovaya_baza_cache_v1';
@@ -77,7 +90,7 @@ function showStaleBanner(savedAt) {
 }
 
 // Общий запрос+разбор gviz-ответа Google Sheets — используется обоими загрузчиками
-// (статьи кодексов и Процессуальный кодекс). Обработка ошибок и раскладка строк по
+// (статьи кодексов и Общая информация). Обработка ошибок и раскладка строк по
 // полям намеренно остаются в каждом загрузчике отдельно (у loadData есть офлайн-кэш
 // и баннер, у loadProceduralData — нет), сюда вынесена только общая часть
 // "получить ответ и распарсить его в массив строк".
@@ -229,13 +242,49 @@ function buildTypeBadge(article, extraClass = '') {
     return `<div class="article-type ${extraClass}" title="${escapeHtml(typeLabel)}">${safeType}</div>`;
 }
 
+// Показывает короткое всплывающее уведомление внизу экрана. Переиспользует один
+// и тот же DOM-элемент между вызовами, чтобы повторное копирование корректно
+// перезапускало анимацию, а не плодило уведомления одно поверх другого.
+let toastEl = null;
+let toastHideTimer = null;
+function showToast(message) {
+    if (!toastEl) {
+        toastEl = document.createElement('div');
+        toastEl.className = 'toast';
+        document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = message;
+
+    clearTimeout(toastHideTimer);
+    toastEl.classList.remove('toast-visible');
+    // Форсируем reflow, чтобы сброс и повторное добавление класса гарантированно
+    // перезапускали CSS-переход при быстром повторном клике.
+    void toastEl.offsetWidth;
+    toastEl.classList.add('toast-visible');
+
+    toastHideTimer = setTimeout(() => {
+        toastEl.classList.remove('toast-visible');
+    }, 1800);
+}
+
+// Копирует номер статьи в формате "ст. <номер> <УК/АК/ДК>" в буфер обмена
+// и показывает уведомление об успехе.
+function copyArticleNumber(article) {
+    const codeLabel = CODE_LABELS[article.code] || '';
+    const text = `ст. ${article.num} ${codeLabel}`.trim();
+
+    navigator.clipboard.writeText(text)
+        .then(() => showToast('Скопировано'))
+        .catch(() => console.warn('Не удалось скопировать номер статьи в буфер обмена'));
+}
+
 function renderArticles() {
     const container = document.getElementById('articlesContainer');
 
     const filterText = document.getElementById('searchInput').value.toLowerCase().trim();
     const isSearching = filterText.length > 0;
 
-    // Процессуальный кодекс — отдельный тип контента, без плиток/списка и своей
+    // Общая информация — отдельный тип контента, без плиток/списка и своей
     // логикой рендера. Но пока идёт поиск (в том числе начатый на этой вкладке),
     // показываем не карточки ПК, а обычные результаты по УК/АК/ДК — так же, как
     // при поиске с любой другой вкладки. proceduralData в эту выдачу не попадает,
@@ -302,6 +351,23 @@ function hasFelonyRecord(article) {
     return article.felony.toLowerCase().includes('судимость');
 }
 
+// Склоняет слово "звезда" по числу (1 звезда / 2-4 звезды / 5+ звёзд) с учётом
+// исключений на 11-14. Считает количество звёзд по длине строки article.stars
+// (значение хранится как повторяющиеся символы "★").
+function pluralizeStars(count) {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'звезда';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'звезды';
+    return 'звёзд';
+}
+
+function starsTitle(article) {
+    const count = article.stars.length;
+    if (!count) return 'Розыск';
+    return `${count} ${pluralizeStars(count)}`;
+}
+
 // Готовит подсвеченные (уже экранированные) поля статьи — заголовок, номер,
 // описание. Общая логика для карточек и списка: раньше этот блок был дословно
 // продублирован в начале renderAsCards и renderAsList.
@@ -347,6 +413,11 @@ function renderAsCards(container, matchedArticles, isSearching, searchWords) {
             </div>
             <div class="desc">${highlightedDesc}</div>
         `;
+
+        const numBadge = card.querySelector('.badge-num');
+        numBadge.title = 'Скопировать номер статьи';
+        numBadge.addEventListener('click', () => copyArticleNumber(article));
+
         container.appendChild(card);
     });
 }
@@ -384,11 +455,13 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
             const safeFine = escapeHtml(article.fine);
             const safeArrest = escapeHtml(article.arrest);
             const hasFelony = hasFelonyRecord(article);
-            const arrestTitle = hasFelony ? `${escapeHtml(article.arrest)}, судимость` : 'Арест';
+            const arrestTitle = safeArrest
+                ? `${safeArrest}, ${hasFelony ? 'судимость' : 'без судимости'}`
+                : 'Арест';
 
             rightHtml = `
-                <div class="row-tag row-slot-fine ${safeFine ? 'row-fine' : ''}" title="Штраф">${safeFine || '—'}</div>
-                <div class="row-tag row-slot-stars" title="Розыск">${safeStars || '—'}</div>
+                <div class="row-tag row-slot-fine ${safeFine ? 'row-fine' : ''}" title="${safeFine ? `Штраф: ${safeFine}` : 'Штраф'}">${safeFine || '—'}</div>
+                <div class="row-tag row-slot-stars" title="${starsTitle(article)}">${safeStars || '—'}</div>
                 <div class="row-tag row-slot-arrest ${hasFelony ? 'row-danger' : ''}" title="${arrestTitle}">${safeArrest || '—'}</div>
             `;
         } else {
@@ -398,7 +471,7 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
 
             rightHtml = `
                 <div class="row-tag row-slot-extra ${hasExtraMeasure ? '' : 'row-hidden'}" title="${hasExtraMeasure ? safeExtraMeasure : ''}">${safeExtraMeasure}</div>
-                <div class="row-tag row-slot-fine ${safeFine ? 'row-fine' : ''}" title="Штраф">${safeFine || '—'}</div>
+                <div class="row-tag row-slot-fine ${safeFine ? 'row-fine' : ''}" title="${safeFine ? `Штраф: ${safeFine}` : 'Штраф'}">${safeFine || '—'}</div>
             `;
         }
 
@@ -416,6 +489,13 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
                 </div>
             </div>
         `;
+
+        const numBadge = row.querySelector('.badge-num');
+        numBadge.title = 'Скопировать номер статьи';
+        numBadge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            copyArticleNumber(article);
+        });
 
         const header = row.querySelector('.row-header');
         const toggleExpanded = () => {
@@ -435,7 +515,7 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
     });
 }
 
-// ===== Процессуальный кодекс: диспетчер шаблонов =====
+// ===== Общая информация: диспетчер шаблонов =====
 // Каждая карточка сама решает, каким шаблоном рендериться (поле "Тип" из таблицы).
 // "text" и "table" пока не реализованы — не встречались в реальном контенте, добавим по необходимости.
 const PK_TEMPLATES = {
@@ -511,6 +591,13 @@ function syncModeToggleUI() {
     });
 }
 
+// Короткие описания сути режима — показываются во всплывающем уведомлении
+// при переключении тумблера, чтобы пользователь понимал, что именно изменилось.
+const DISPLAY_MODE_TOAST = {
+    compact: 'Компактный режим — только частые статьи',
+    full: 'Полный режим — показаны все статьи'
+};
+
 document.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', (e) => {
     const selectedMode = e.currentTarget.getAttribute('data-mode');
     if (selectedMode === currentDisplayMode) return;
@@ -518,6 +605,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('clic
     localStorage.setItem(DISPLAY_MODE_KEY, currentDisplayMode);
     syncModeToggleUI();
     renderArticles();
+    if (toggleNotificationsEnabled) showToast(DISPLAY_MODE_TOAST[currentDisplayMode]);
 }));
 
 syncModeToggleUI();
@@ -530,6 +618,13 @@ function syncViewToggleUI() {
     });
 }
 
+// Короткие описания сути вида отображения — та же логика, что и для
+// DISPLAY_MODE_TOAST выше.
+const VIEW_TOAST = {
+    grid: 'Вид: плитки',
+    list: 'Вид: список'
+};
+
 document.querySelectorAll('.view-btn').forEach(btn => btn.addEventListener('click', (e) => {
     const selectedView = e.currentTarget.getAttribute('data-view');
     if (selectedView === currentView) return;
@@ -537,6 +632,7 @@ document.querySelectorAll('.view-btn').forEach(btn => btn.addEventListener('clic
     localStorage.setItem(VIEW_KEY, currentView);
     syncViewToggleUI();
     renderArticles();
+    if (toggleNotificationsEnabled) showToast(VIEW_TOAST[currentView]);
 }));
 
 syncViewToggleUI();
@@ -598,6 +694,14 @@ settingsBtn.addEventListener('click', (e) => {
 
 settingsPanel.addEventListener('click', (e) => {
     e.stopPropagation();
+});
+
+// ===== Настройка "Уведомления тумблеров" =====
+const notificationsToggle = document.getElementById('notificationsToggle');
+notificationsToggle.checked = toggleNotificationsEnabled;
+notificationsToggle.addEventListener('change', () => {
+    toggleNotificationsEnabled = notificationsToggle.checked;
+    localStorage.setItem(NOTIFICATIONS_KEY, String(toggleNotificationsEnabled));
 });
 
 document.addEventListener('click', () => {
