@@ -5,6 +5,9 @@ const TIMEOUT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?
 const SHEET_NAME_PK = encodeURIComponent('Общая информация');
 const PK_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_NAME_PK}&headers=0`;
 
+const SHEET_NAME_META = encodeURIComponent('Последняя редакция');
+const META_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_NAME_META}&headers=0`;
+
 let parsedDatabase = [];
 let proceduralData = [];
 let currentCode = "uk";
@@ -30,6 +33,14 @@ let currentZoom = (Number.isInteger(storedZoom) && storedZoom >= ZOOM_MIN && sto
 // Настройка "Уведомления тумблеров" в панели настроек — включает/выключает
 // показ toast-уведомлений при переключении режима отображения и вида
 // (compact/full, плитки/список). Не влияет на уведомление "Скопировано".
+// Дата последней редакции БД (лист "Последняя редакция", A2) — вписывается вручную,
+// когда правки по статьям осознанно завершены. DB_DATE_SEEN_KEY хранит дату, которую
+// этот браузер уже видел; DB_DATE_TOAST_DAY_KEY — календарный день, когда тост
+// в последний раз показывался (чтобы не дёргать пользователя при каждой
+// перезагрузке в течение одной смены).
+const DB_DATE_SEEN_KEY = 'majestic_portland_db_date_seen';
+const DB_DATE_TOAST_DAY_KEY = 'majestic_portland_db_date_toast_day';
+
 const NOTIFICATIONS_KEY = 'majestic_portland_toggle_notifications';
 let toggleNotificationsEnabled = localStorage.getItem(NOTIFICATIONS_KEY) !== 'false';
 
@@ -187,7 +198,8 @@ async function loadData() {
                 felony: getVal(8),
                 type: getVal(9),   
                 tags: getVal(10),
-                frequency: normalizeFrequency(getVal(11))
+                frequency: normalizeFrequency(getVal(11)),
+                forumUrl: getVal(12)
             });
         });
         saveCache(parsedDatabase);
@@ -247,6 +259,52 @@ async function loadProceduralData() {
     }
 }
 
+// Загружает дату последней редакции БД с отдельного листа "Последняя редакция"
+// (A1 — заголовок "Последняя редакция", A2 — сама дата). Дата хранится и
+// показывается как обычный текст, без разбора формата — что вписано в таблицу
+// вручную, то и попадает на экран один в один.
+async function loadMetaData() {
+    try {
+        const rows = await fetchGvizRows(META_URL);
+        for (const row of rows) {
+            if (!row.c) continue;
+            const value = getCellVal(row.c, 0);
+            if (!value || value === 'Последняя редакция') continue;
+            notifyDbDate(value);
+            return;
+        }
+    } catch (e) {
+        console.error('Не удалось загрузить дату последней редакции базы:', e);
+    }
+}
+
+// Обновляет подпись в панели настроек и решает, нужно ли показать тост:
+// сразу — если дата реально отличается от той, что этот браузер видел в прошлый
+// раз (первый заход сюда же — localStorage пуст, дата "новая"), либо один раз за
+// календарный день — если дата та же самая, просто как напоминание, что памятка
+// не заброшена. Не зависит от тумблера "Уведомления тумблеров": по важности этот
+// тост ближе к "Скопировано", чем к техническим тостам переключения режима/вида.
+function notifyDbDate(dbDate) {
+    document.querySelectorAll('.settings-meta-date').forEach(el => {
+        el.textContent = `Последняя редакция: ${dbDate}`;
+    });
+
+    const today = new Date().toDateString();
+    const seenDate = localStorage.getItem(DB_DATE_SEEN_KEY);
+
+    if (seenDate !== dbDate) {
+        localStorage.setItem(DB_DATE_SEEN_KEY, dbDate);
+        localStorage.setItem(DB_DATE_TOAST_DAY_KEY, today);
+        showToast(`Последняя редакция: ${dbDate}`);
+        return;
+    }
+
+    if (localStorage.getItem(DB_DATE_TOAST_DAY_KEY) !== today) {
+        localStorage.setItem(DB_DATE_TOAST_DAY_KEY, today);
+        showToast(`Последняя редакция: ${dbDate}`);
+    }
+}
+
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -277,6 +335,27 @@ function buildTypeBadge(article, extraClass = '') {
     if (!safeType || safeType === '-') return '';
     const typeLabel = TYPE_LABELS[article.type] || '';
     return `<div class="article-type ${extraClass}" title="${escapeHtml(typeLabel)}">${safeType}</div>`;
+}
+
+// Строит инлайн-иконку-ссылку "перейти к статье на форуме" для конца текста
+// описания. href намеренно не пишется прямо в разметку (ссылка вида
+// "...#:~:text=..." может содержать спецсимволы) — вместо этого рендерится
+// пустой якорь с маркерным классом, а href проставляется отдельно через
+// element.href после вставки в DOM (см. attachForumLink). Если ссылки на
+// статью нет — возвращает '', иконка в тексте просто не появляется.
+function buildForumLinkIcon(article) {
+    if (!article.forumUrl) return '';
+    return `<a class="desc-forum-link" target="_blank" rel="noopener" title="Открыть статью на форуме" aria-label="Открыть статью на форуме"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M8 6H18V16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
+}
+
+// Проставляет href всем иконкам-ссылкам на форум внутри переданного элемента
+// (карточка или строка). Один вызов на каждую отрисованную карточку/строку —
+// внутри неё максимум одна такая иконка (в конце описания), но querySelectorAll
+// используется на случай будущих изменений разметки, а не по необходимости сейчас.
+function attachForumLinks(root, article) {
+    root.querySelectorAll('.desc-forum-link').forEach(link => {
+        link.href = article.forumUrl;
+    });
 }
 
 // Показывает короткое всплывающее уведомление внизу экрана. Переиспользует один
@@ -458,7 +537,7 @@ function renderAsCards(container, matchedArticles, isSearching, searchWords) {
                 <div class="info-row"><div class="info-label">Судимость</div><div class="info-val ${hasFelonyRecord(article) ? 'danger' : ''}">${safeFelony || '—'}</div></div>
                 <div class="info-row"><div class="info-label">Доп. мера</div><div class="info-val">${safeExtraMeasure || '—'}</div></div>
             </div>
-            <div class="desc">${highlightedDesc}</div>
+            <div class="desc">${highlightedDesc}${buildForumLinkIcon(article)}</div>
         `;
 
         const numBadge = card.querySelector('.badge-num');
@@ -467,6 +546,8 @@ function renderAsCards(container, matchedArticles, isSearching, searchWords) {
 
         const pinBtn = card.querySelector('.pin-btn');
         pinBtn.addEventListener('click', () => togglePinned(article));
+
+        attachForumLinks(card, article);
 
         container.appendChild(card);
     });
@@ -535,7 +616,7 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
             </div>
             <div class="row-desc-wrapper">
                 <div class="row-desc-inner">
-                    <div class="row-desc">${highlightedDesc}</div>
+                    <div class="row-desc">${highlightedDesc}${buildForumLinkIcon(article)}</div>
                 </div>
             </div>
         `;
@@ -552,6 +633,8 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
             e.stopPropagation();
             togglePinned(article);
         });
+
+        attachForumLinks(row, article);
 
         const header = row.querySelector('.row-header');
         const toggleExpanded = () => {
@@ -651,8 +734,8 @@ function syncModeToggleUI() {
 // Короткие описания сути режима — показываются во всплывающем уведомлении
 // при переключении тумблера, чтобы пользователь понимал, что именно изменилось.
 const DISPLAY_MODE_TOAST = {
-    compact: 'Компактный режим — только частые статьи',
-    full: 'Полный режим — показаны все статьи'
+    compact: 'Основные статьи',
+    full: 'Все статьи'
 };
 
 document.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', (e) => {
@@ -777,3 +860,4 @@ document.getElementById('searchInput').addEventListener('input', () => {
 });
 loadData();
 loadProceduralData();
+loadMetaData();
