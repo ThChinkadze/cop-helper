@@ -61,44 +61,6 @@ body {
     align-items: center; 
 }
 
-@media (max-width: 480px) {
-    body {
-        padding: 10px;
-    }
-
-    /* Только для узких экранов. ВАЖНО: overflow-x:auto попутно обрезает
-       вертикальную часть теней кнопок (спецификация переводит overflow-y тоже в auto). */
-    .tabs {
-        overflow-x: auto;
-        scrollbar-width: none;
-    }
-
-    .tabs::-webkit-scrollbar {
-        display: none;
-    }
-
-    /* Список на узких экранах — перенос строки вместо сжатия колонок */
-    .row-header {
-        flex-wrap: wrap;
-    }
-
-    .row-left {
-        width: 100%;
-    }
-
-    .row-title {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: unset;
-    }
-
-    .row-right {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-    }
-}
-
 .controls-container { 
     width: 100%; max-width: 1100px; 
     position: sticky; top: 0; z-index: 100; 
@@ -205,16 +167,18 @@ body {
     flex-shrink: 0;
     gap: 4px;
     background-color: var(--control-bg);
+    border: 1px solid var(--control-border);
     border-radius: 8px;
     padding: 4px;
-    box-shadow: var(--control-shadow);
+    box-sizing: border-box;
 }
 
 .mode-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
+    width: 36px;
+    height: 28px;
     padding: 0;
     background-color: transparent;
     color: var(--text-muted);
@@ -249,8 +213,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 32px;
+    width: 36px;
+    height: 28px;
     padding: 0;
     background-color: transparent;
     color: var(--text-muted);
@@ -279,7 +243,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
+    width: 48px;
     height: 100%;
     padding: 0;
     background-color: var(--control-bg);
@@ -340,14 +304,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     flex-shrink: 0;
     background-color: var(--control-bg);
     color: var(--text-title);
     border: 1px solid var(--control-border);
-    border-radius: 8px;
-    font-size: 18px;
+    border-radius: 7px;
+    font-size: 16px;
     font-weight: 800;
     line-height: 1;
     cursor: pointer;
@@ -716,19 +680,6 @@ body {
     padding-top: 8px; 
     margin: 0; 
     overflow-y: auto; 
-}
-
-.desc-forum-link {
-    display: inline-flex;
-    vertical-align: -2px;
-    margin-left: 4px;
-    color: var(--text-main);
-    transition: color 0.15s ease;
-}
-
-.desc-forum-link:hover,
-.desc-forum-link:focus-visible {
-    color: var(--accent);
 }
 
 .loader { 
