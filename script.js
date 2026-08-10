@@ -103,8 +103,7 @@ const COL = {
     FELONY: 8,
     TYPE: 9,
     TAGS: 10,
-    FREQUENCY: 11,
-    FORUM_URL: 12
+    FREQUENCY: 11
 };
 
 const CACHE_KEY = 'majestic_portland_pravovaya_baza_cache_v1';
@@ -202,8 +201,7 @@ async function loadData() {
                 felony: getVal(COL.FELONY),
                 type: getVal(COL.TYPE),   
                 tags: getVal(COL.TAGS),
-                frequency: normalizeFrequency(getVal(COL.FREQUENCY)),
-                forumUrl: getVal(COL.FORUM_URL)
+                frequency: normalizeFrequency(getVal(COL.FREQUENCY))
             });
         });
         saveCache(parsedDatabase);
@@ -339,22 +337,7 @@ function buildPinButton(article, size) {
     return `<button class="pin-btn" title="${label}" aria-label="${label}" aria-pressed="${pinned}"><svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 4V11L6 15V17H18V15L15 11V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 4H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>`;
 }
 
-// ВАЖНО: href не пишется прямо в разметку (в ссылке вида "#:~:text=..." могут
-// быть спецсимволы) — рендерится пустой якорь, href проставляется отдельно
-// через element.href после вставки в DOM (см. attachForumLinks).
-function buildForumLinkIcon(article) {
-    if (!article.forumUrl) return '';
-    return `<a class="desc-forum-link" target="_blank" rel="noopener" title="Открыть статью на форуме" aria-label="Открыть статью на форуме"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M8 6H18V16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
-}
-
-// Проставляет href иконкам-ссылкам на форум внутри карточки/строки — см. buildForumLinkIcon.
-function attachForumLinks(root, article) {
-    root.querySelectorAll('.desc-forum-link').forEach(link => {
-        link.href = article.forumUrl;
-    });
-}
-
-// Общие обработчики карточки/строки: копирование номера, пин, ссылки на форум.
+// Общие обработчики карточки/строки: копирование номера, пин.
 // stopPropagation нужен для списка — строка целиком кликабельна (раскрытие описания).
 function attachArticleHandlers(root, article, { stopPropagation = false } = {}) {
     const numBadge = root.querySelector('.badge-num');
@@ -369,8 +352,6 @@ function attachArticleHandlers(root, article, { stopPropagation = false } = {}) 
         if (stopPropagation) e.stopPropagation();
         togglePinned(article);
     });
-
-    attachForumLinks(root, article);
 }
 
 // ===== Toast-уведомления =====
@@ -524,7 +505,7 @@ function renderAsCards(container, matchedArticles, isSearching, searchWords) {
             <div class="card-header">
                 <div class="title-row">
                     ${buildPinButton(article, 15)}
-                    <div class="title">${highlightedTitle}</div>
+                    <div class="title" title="${escapeHtml(article.title)}">${highlightedTitle}</div>
                 </div>
                 <div class="card-header-right">${typeHtml}<div class="badge-num">ст. ${highlightedNum}</div></div>
             </div>
@@ -535,7 +516,7 @@ function renderAsCards(container, matchedArticles, isSearching, searchWords) {
                 <div class="info-row"><div class="info-label">Судимость</div><div class="info-val ${hasFelonyRecord(article) ? 'danger' : ''}">${safeFelony || '—'}</div></div>
                 <div class="info-row"><div class="info-label">Доп. мера</div><div class="info-val">${safeExtraMeasure || '—'}</div></div>
             </div>
-            <div class="desc">${highlightedDesc}${buildForumLinkIcon(article)}</div>
+            <div class="desc">${highlightedDesc}</div>
         `;
 
         attachArticleHandlers(card, article);
@@ -564,7 +545,7 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
         const leftHtml = `
             ${typeHtml}
             <div class="badge-num row-num row-slot-num">ст. ${highlightedNum}</div>
-            <div class="row-title">${buildPinButton(article, 14)}${highlightedTitle}</div>
+            <div class="row-title" title="${escapeHtml(article.title)}">${buildPinButton(article, 14)}${highlightedTitle}</div>
         `;
 
         // УК — звёзды/штраф/арест; АК и ДК — доп. мера/штраф. row-slot-* держат ширину.
@@ -604,7 +585,7 @@ function renderAsList(container, matchedArticles, isSearching, searchWords) {
             </div>
             <div class="row-desc-wrapper">
                 <div class="row-desc-inner">
-                    <div class="row-desc">${highlightedDesc}${buildForumLinkIcon(article)}</div>
+                    <div class="row-desc">${highlightedDesc}</div>
                 </div>
             </div>
         `;
@@ -674,7 +655,7 @@ function renderProceduralCards(container) {
 
         card.innerHTML = `
             <div class="card-header">
-                <div class="title">${escapeHtml(item.title)}</div>
+                <div class="title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
             </div>
             <div class="pk-body">${renderProceduralCardBody(item)}</div>
         `;
